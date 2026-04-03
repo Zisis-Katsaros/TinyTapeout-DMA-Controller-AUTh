@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2024 Your Name
+ * Copyright (c) 2024 Kyriakos Kokkinos
  * SPDX-License-Identifier: Apache-2.0
  */
 
 `default_nettype none
 
-module tt_um_example (
+module tt_um_AUTH_DMA_CONTROLLER (
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
     input  wire [7:0] uio_in,   // IOs: Input path
@@ -15,13 +15,143 @@ module tt_um_example (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
+  
+  
+  	reg BR;
+    reg WRITE_en;
+    reg done;
+    reg valid;
+    reg ALE;
+    reg bus_dir;
 
-  // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
-  assign uio_out = 0;
-  assign uio_oe  = 0;
+    localparam IDLE = 3'b000;
+    localparam CONFIGURATION = 3'b001;
+  	localparam HANDSHAKE = 3'b010;	
+    localparam RECEIVING = 3'b011;
+    localparam SENDING = 3'b100;
 
-  // List all unused inputs to prevent warnings
-  wire _unused = &{ena, clk, rst_n, 1'b0};
+    reg [2:0] current_state, next_state;
+    reg [2:0] counter;
+    reg MODE ; //0 for single word transfer and 1 for burst mode
+    reg direction; //0 for MEMORY -> IO write 1 for IO -> MEMORY  
+    reg [2:0] words_left;
+    reg [7:0] src_addr;
+    reg [7:0] dest_addr;
+    reg [7:0] data;
+    reg [7:0] transfer_bus_out;
+  
+    //INPUTS
+    wire BG;
+    wire Enable;
+    wire fetch;
+  	wire [3:0] cfg_in;
+
+  assign Enable = ui_in[7];
+  assign BG = ui_in[6];
+  assign fetch = ui_in[5];
+  assign cfg_in = ui_in[3:0];
+
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            current_state <= IDLE;
+            counter <= 3'b000;
+          	src_addr <= 8'b00000000;
+          	dest_addr <= 8'b00000000;
+          	data <= 8'b00000000;
+          	transfer_bus_out <= 8'b00000000;
+        end 
+        else begin
+            current_state <= next_state;
+
+          if (next_state != current_state || current_state==IDLE) begin
+                counter <= 3'b000;
+            end 
+            else begin
+                counter <= counter + 3'b001;
+            end
+
+          	//To ypoloipo sequential Logic
+          case(current_state) 
+            IDLE: begin
+              if (Enable) begin
+                src_addr[3:0] <= cfg_in;
+                MODE <= ui_in[4];
+            	end
+              end 
+              
+             CONFIGURATION: begin
+               if (counter == 0) begin
+                 src_addr[7:4] <= cfg_in;
+               end
+               
+               if (counter == 1) begin
+                 dest_addr[3:0] <= cfg_in;
+               end
+               
+               if (counter == 2) begin
+                 dest_addr[7:4] <= cfg_in;
+               end
+             end
+              
+
+            endcase
+          
+        end
+    end
+
+    always @* begin: NEXT_STATE_LOGIC
+        next_state = current_state;
+
+        case (current_state)
+            IDLE: begin
+                if (Enable) begin
+                    next_state = CONFIGURATION;
+                end
+            end
+
+            CONFIGURATION: begin
+              if (counter == 2)
+                next_state = HANDSHAKE;
+            end
+          
+            HANDSHAKE: begin
+                if (BG)
+                  next_state = RECEIVING;
+              end
+
+            RECEIVING: begin
+               
+            end
+
+            SENDING: begin
+               
+            end
+
+            default: begin
+                next_state = IDLE;
+            end
+        endcase
+    end
+
+    always @* begin: OUTPUT_LOGIC
+        case (current_state)
+
+            HANDSHAKE: begin
+                BR = 1;    
+            end
+          
+          	RECEIVING: begin
+                WRITE_en = 0;   
+            end
+          
+        endcase
+    end
+
+    assign uo_out = {2'b00, bus_dir, ALE, valid, done, WRITE_en, BR};
+    assign uio_out = transfer_bus_out;
+    assign uio_oe = bus_dir ? 8'hFF : 8'h00;
+
+    wire _unused = &{ena, 1'b0};
 
 endmodule
