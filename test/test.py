@@ -16,6 +16,10 @@ from randomized_clock_helpers import _init_random_clocks
 from speed_profile_helpers import _init_variable_clocks, _period_from_speed
 
 
+
+# For all tests
+rtrn_delay = 3
+
 # Single Word Mode Test
 @cocotb.test()
 async def test_single_word_mode(dut):
@@ -27,7 +31,7 @@ async def test_single_word_mode(dut):
     payload = [0x5C]
 
     await _send_cfg(dut, mode=0, direction=0, src_addr=src_addr, dst_addr=dst_addr)
-    await _run_transfer_sequence(dut, src_addr=src_addr, dst_addr=dst_addr, payload=payload, direction=0)
+    await _run_transfer_sequence(dut, src_addr=src_addr, dst_addr=dst_addr, payload=payload, direction=0, rtrn_delay=rtrn_delay)
 
     await _wait_until(dut, lambda: int(dut.uo_out.value[5]) == 1, max_cycles=200)
     await _wait_until(dut, lambda: int(dut.uo_out.value[7]) == 0, max_cycles=40)
@@ -43,7 +47,7 @@ async def test_burst4_mode(dut):
     payload = [0x11, 0x22, 0x33, 0x44]
 
     await _send_cfg(dut, mode=1, direction=0, src_addr=src_addr, dst_addr=dst_addr)
-    await _run_transfer_sequence(dut, src_addr=src_addr, dst_addr=dst_addr, payload=payload, direction=0)
+    await _run_transfer_sequence(dut, src_addr=src_addr, dst_addr=dst_addr, payload=payload, direction=0, rtrn_delay=rtrn_delay)
 
     await _wait_until(dut, lambda: int(dut.uo_out.value[5]) == 1, max_cycles=300)
     await _wait_until(dut, lambda: int(dut.uo_out.value[7]) == 0, max_cycles=120)
@@ -79,6 +83,7 @@ async def test_randomized_clock_and_transfer_stress(dut):
             payload=payload,
             direction=direction,
             phase_wait_cycles=800,
+            rtrn_delay=rtrn_delay
         )
 
         await _wait_until(dut, lambda: int(dut.uo_out.value[5]) == 1, max_cycles=400)
@@ -147,6 +152,7 @@ async def test_all_speed_profile_combinations(dut):
                 payload=payload,
                 direction=direction,
                 phase_wait_cycles=1200,
+                rtrn_delay=rtrn_delay
             )
             await _wait_until(dut, lambda: int(dut.uo_out.value[5]) == 1, max_cycles=600)
             await _wait_until(dut, lambda: int(dut.uo_out.value[7]) == 0, max_cycles=240)

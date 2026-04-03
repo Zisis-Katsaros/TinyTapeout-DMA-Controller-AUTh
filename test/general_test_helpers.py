@@ -80,7 +80,7 @@ async def _pulse_rtrn(dut, sender, bg=1, pre_cycles=4, max_wait_cycles=200):
     await ClockCycles(source_clk, 1)
 
 
-async def _run_transfer_sequence(dut, src_addr, dst_addr, payload, direction, phase_wait_cycles=300):
+async def _run_transfer_sequence(dut, src_addr, dst_addr, payload, direction, phase_wait_cycles=300, rtrn_delay=3):
     # direction 0: mem -> io, direction 1: io -> mem
     receive_sender = "mem" if direction == 0 else "io"
     send_sender = "io" if direction == 0 else "mem"
@@ -111,7 +111,7 @@ async def _run_transfer_sequence(dut, src_addr, dst_addr, payload, direction, ph
 
         # RECEIVE phase: source returns data, signaled by rtrn rising edge.
         dut.uio_in.value = datum
-        await _pulse_rtrn(dut, sender=receive_sender, bg=1, pre_cycles=3)
+        await _pulse_rtrn(dut, sender=receive_sender, bg=1, pre_cycles=rtrn_delay)
 
         # SENDaddr phase: DMA presents destination address with valid and WRITE_en=1.
         await _wait_until(
@@ -129,7 +129,7 @@ async def _run_transfer_sequence(dut, src_addr, dst_addr, payload, direction, ph
             f"expected 0x{exp_dst:02X}"
         )
 
-        await _pulse_rtrn(dut, sender=send_sender, bg=1, pre_cycles=3)
+        await _pulse_rtrn(dut, sender=send_sender, bg=1, pre_cycles=rtrn_delay)
 
         # SENDdata phase: DMA presents captured data with valid and WRITE_en=1.
         await _wait_until(
@@ -147,7 +147,7 @@ async def _run_transfer_sequence(dut, src_addr, dst_addr, payload, direction, ph
             f"expected 0x{(datum & 0xFF):02X}"
         )
 
-        await _pulse_rtrn(dut, sender=send_sender, bg=1, pre_cycles=3)
+        await _pulse_rtrn(dut, sender=send_sender, bg=1, pre_cycles=rtrn_delay)
 
 
 async def _init_clock(dut):
