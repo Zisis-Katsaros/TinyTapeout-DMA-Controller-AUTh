@@ -3,201 +3,18 @@
 
 import cocotb
 import random
-from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles, Timer
+from itertools import product
+from cocotb.triggers import ClockCycles
+from general_test_helpers import (
+    _init_clock,
+    _reset_dut,
+    _run_transfer_sequence,
+    _send_cfg,
+    _wait_until,
+)
+from randomized_clock_helpers import _init_random_clocks
+from speed_profile_helpers import _init_variable_clocks, _period_from_speed
 
-
-# 8-bit ui_in
-def _pack_ui(start=0, bg=0, rtrn=0, cfg=0):
-    # "&" to ensure we get excaclty as many bits as we expect, "<<" to shift into position, "|" to combine
-    return ((start & 1) << 7) | ((bg & 1) << 6) | ((rtrn & 1) << 5) | (cfg & 0x1F)
-
-async def _wait_until(dut, predicate, max_cycles=100):
-    for _ in range(max_cycles):
-        if predicate():
-            return
-        await ClockCycles(dut.clk, 1)
-    raise AssertionError(f"Timeout waiting for condition after {max_cycles} cycles")
-
-
-async def _reset_dut(dut):
-    dut.ena.value = 1
-    dut.ui_in.value = _pack_ui(start=0, bg=0, rtrn=0, cfg=0)
-    dut.uio_in.value = 0
-    dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 5)
-    dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 5)
-    dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 2)
-
-# Instructions from CPU
-async def _send_cfg(dut, mode, direction, src_addr, dst_addr):
-    words = [
-        ((mode & 1) << 4) | (src_addr & 0x0F),
-        ((direction & 1) << 4) | ((src_addr >> 4) & 0x0F),
-        (dst_addr & 0x0F),
-        ((dst_addr >> 4) & 0x0F),
-    ]
-
-    # Send start and wait 1 cycle
-    dut.ui_in.value = _pack_ui(start=1, bg=0, rtrn=0, cfg=words[0])
-    await ClockCycles(dut.clk, 1)
-
-    # Send instructions
-    for w in words:
-        dut.ui_in.value = _pack_ui(start=1, bg=0, rtrn=0, cfg=w)
-        await ClockCycles(dut.clk, 1)
-
-    # Pull start down and wait for DMAC BR before CPU grants bus (BG).
-    dut.ui_in.value = _pack_ui(start=0, bg=0, rtrn=0, cfg=0)
-    await _wait_until(dut, lambda: int(dut.uo_out.value[7]) == 1, max_cycles=120)
-    await ClockCycles(dut.clk, 2)
-    dut.ui_in.value = _pack_ui(start=0, bg=1, rtrn=0, cfg=0)
-
-# Send rtrn pulse via 2FF synchronizer
-async def _pulse_rtrn(dut, sender, bg=1, pre_cycles=4, max_wait_cycles=200):
-    if sender == "mem":
-        source_clk = dut.mem_clk
-    else:
-        source_clk = dut.io_clk
-
-    dut.ui_in.value = _pack_ui(start=0, bg=bg, rtrn=0, cfg=0)
-    await ClockCycles(source_clk, pre_cycles)
-    dut.ui_in.value = _pack_ui(start=0, bg=bg, rtrn=1, cfg=0)
-    # Pull down rtrn once ack is sent
-    for _ in range(max_wait_cycles):
-        if int(dut.uo_out.value[3]) == 1:
-            break
-        await ClockCycles(dut.clk, 1)
-    else:
-        raise AssertionError(f"Timeout waiting for ack after {max_wait_cycles} cycles")
-    dut.ui_in.value = _pack_ui(start=0, bg=bg, rtrn=0, cfg=0)
-    await ClockCycles(source_clk, 1)
-
-
-async def _run_transfer_sequence(dut, src_addr, dst_addr, payload, direction, phase_wait_cycles=300):
-    # direction 0: mem -> io, direction 1: io -> mem
-    receive_sender = "mem" if direction == 0 else "io"
-    send_sender = "io" if direction == 0 else "mem"
-    source_target = direction
-    dest_target = direction ^ 1
-
-    for i, datum in enumerate(payload):
-        # Expected addresses (increment for burst mode)
-        exp_src = (src_addr + i) & 0xFF
-        exp_dst = (dst_addr + i) & 0xFF
-
-        # SRC_SEND phase: DMA drives source address with valid and WRITE_en=0.
-        await _wait_until(
-            dut,
-            lambda: int(dut.uo_out.value[4]) == 1 and int(dut.uo_out.value[6]) == 0,
-            max_cycles=phase_wait_cycles,
-        )
-        # Check that DMA is setting bidir ports to output
-        assert int(dut.uio_oe.value) == 0xFF, "DMA must drive transfer bus in SRC_SEND"
-        # Check that target flag identifies source endpoint correctly.
-        assert int(dut.uo_out.value[2]) == source_target, (
-            f"Target flag mismatch in SRC_SEND at beat {i}: got {int(dut.uo_out.value[2])}, "
-            f"expected {source_target}"
-        )
-        # Check that DMA is sending the expected address
-        assert int(dut.uio_out.value) == exp_src, (
-            f"SRC address mismatch at beat {i}: got 0x{int(dut.uio_out.value):02X}, "
-            f"expected 0x{exp_src:02X}"
-        )
-
-        # RECEIVE phase: source returns data, signaled by rtrn rising edge.
-        dut.uio_in.value = datum
-        await _pulse_rtrn(dut, sender=receive_sender, bg=1, pre_cycles=3)
-
-        # SENDaddr phase: DMA presents destination address with valid and WRITE_en=1.
-        await _wait_until(
-            dut,
-            lambda: int(dut.uo_out.value[4]) == 1 and int(dut.uo_out.value[6]) == 1,
-            max_cycles=phase_wait_cycles,
-        )
-        assert int(dut.uo_out.value[2]) == dest_target, (
-            f"Target flag mismatch in SENDaddr at beat {i}: got {int(dut.uo_out.value[2])}, "
-            f"expected {dest_target}"
-        )
-        assert int(dut.uio_out.value) == exp_dst, (
-            f"DST address mismatch at beat {i}: got 0x{int(dut.uio_out.value):02X}, "
-            f"expected 0x{exp_dst:02X}"
-        )
-
-        await _pulse_rtrn(dut, sender=send_sender, bg=1, pre_cycles=3)
-
-        # SENDdata phase: DMA presents captured data with valid and WRITE_en=1.
-        await _wait_until(
-            dut,
-            lambda: int(dut.uo_out.value[4]) == 1 and int(dut.uo_out.value[6]) == 1,
-            max_cycles=phase_wait_cycles,
-        )
-        assert int(dut.uo_out.value[2]) == dest_target, (
-            f"Target flag mismatch in SENDdata at beat {i}: got {int(dut.uo_out.value[2])}, "
-            f"expected {dest_target}"
-        )
-        assert int(dut.uio_out.value) == (datum & 0xFF), (
-            f"DST payload mismatch at beat {i}: got 0x{int(dut.uio_out.value):02X}, "
-            f"expected 0x{(datum & 0xFF):02X}"
-        )
-        await _pulse_rtrn(dut, sender=send_sender, bg=1, pre_cycles=3)
-
-
-async def _init_clock(dut):
-    # Initialize three independent clock domains
-    # DMAC/CPU clock: 100MHz (period = 10us in simulation time scaling)
-    dmac_clock = Clock(dut.clk, 10, unit="us")
-    cocotb.start_soon(dmac_clock.start())
-
-    # Memory clock: 80MHz (period = 12.5us)
-    mem_clock = Clock(dut.mem_clk, 12.5, unit="us")
-    cocotb.start_soon(mem_clock.start())
-
-    # I/O Device clock: 120MHz (period = 8.33us)
-    io_clock = Clock(dut.io_clk, 8.33, unit="us")
-    cocotb.start_soon(io_clock.start())
-
-
-async def _start_clock_with_phase(signal, period_ps, phase_ps):
-    if phase_ps != 0:
-        pos_phase_ps = phase_ps if phase_ps > 0 else period_ps + phase_ps
-        await Timer(pos_phase_ps, unit="ps")
-    clock = Clock(signal, period_ps, unit="ps")
-    await clock.start()
-
-# Helper function to generate random (even) periods
-def _random_even_period_ps(rng, nominal_ps, span_percent=20):
-    low_scale = 1 - span_percent / 100
-    high_scale = 1 + span_percent / 100
-    period = int(nominal_ps * rng.uniform(low_scale, high_scale))
-    return max(2, period - (period % 2))
-
-
-# Initialize clock domains with randomized frequencies
-async def _init_random_clocks(dut, rng, span_percent=20):
-    # Randomize each domain around nominal values with practical margins.
-    # Nominal periods in ps: 10us, 12.5us, 8.33us
-    dmac_period = _random_even_period_ps(rng, 10_000_000, span_percent)
-    mem_period = _random_even_period_ps(rng, 12_500_000, span_percent)
-    io_period = _random_even_period_ps(rng, 8_330_000, span_percent)
-
-    # Random startup phase offsets create inter-domain phase differences.
-    dmac_phase = 0
-    mem_phase = rng.randint(0, max(mem_period - 1, 0))
-    io_phase = rng.randint(0, max(io_period - 1, 0))
-
-    dut.clk.value = 0
-    dut.mem_clk.value = 0
-    dut.io_clk.value = 0
-
-    cocotb.start_soon(_start_clock_with_phase(dut.clk, dmac_period, dmac_phase))
-    cocotb.start_soon(_start_clock_with_phase(dut.mem_clk, mem_period, mem_phase))
-    cocotb.start_soon(_start_clock_with_phase(dut.io_clk, io_period, io_phase))
-
-    # Ensure all three clocks are running before reset/transactions begin.
-    await ClockCycles(dut.clk, 3)
 
 # Single Word Mode Test
 @cocotb.test()
@@ -266,3 +83,76 @@ async def test_randomized_clock_and_transfer_stress(dut):
 
         await _wait_until(dut, lambda: int(dut.uo_out.value[5]) == 1, max_cycles=400)
         await _wait_until(dut, lambda: int(dut.uo_out.value[7]) == 0, max_cycles=160)
+
+# Slow, Normal, Fast speed profiles combionation test
+@cocotb.test()
+async def test_all_speed_profile_combinations(dut):
+    rng = random.Random(0xA11C0B0)
+
+    # Normal periods (ps): DMAC=10us, mem=12.5us, io=8.33us
+    dmac_normal_ps = 10_000_000
+    mem_normal_ps = 12_500_000
+    io_normal_ps = 8_330_000
+
+    # Single variable controlling slow/fast offset from normal.
+    speed_delta_percent = 30
+
+    dmac_ref, mem_ref, io_ref = await _init_variable_clocks(
+        dut,
+        rng,
+        dmac_normal_ps,
+        mem_normal_ps,
+        io_normal_ps,
+    )
+
+    speed_levels = ("slow", "normal", "fast")
+
+    for dmac_speed, src_speed, dest_speed in product(speed_levels, repeat=3):
+        direction = rng.randint(0, 1)
+        mode = rng.randint(0, 1)
+        src_addr = rng.randint(0, 0xFF)
+        dst_addr = rng.randint(0, 0xFF)
+        payload_len = 4 if mode == 1 else 1
+        payload = [rng.randint(0, 0xFF) for _ in range(payload_len)]
+
+        # Map logical src/dest speeds to physical mem/io clocks via direction.
+        if direction == 0:
+            mem_speed = src_speed
+            io_speed = dest_speed
+        else:
+            mem_speed = dest_speed
+            io_speed = src_speed
+
+        dmac_ref["period_ps"] = _period_from_speed(dmac_normal_ps, dmac_speed, speed_delta_percent)
+        mem_ref["period_ps"] = _period_from_speed(mem_normal_ps, mem_speed, speed_delta_percent)
+        io_ref["period_ps"] = _period_from_speed(io_normal_ps, io_speed, speed_delta_percent)
+
+        # Let period updates take effect before reset and transaction.
+        await ClockCycles(dut.clk, 4)
+        await _reset_dut(dut)
+
+        try:
+            await _send_cfg(
+                dut,
+                mode=mode,
+                direction=direction,
+                src_addr=src_addr,
+                dst_addr=dst_addr,
+            )
+            await _run_transfer_sequence(
+                dut,
+                src_addr=src_addr,
+                dst_addr=dst_addr,
+                payload=payload,
+                direction=direction,
+                phase_wait_cycles=1200,
+            )
+            await _wait_until(dut, lambda: int(dut.uo_out.value[5]) == 1, max_cycles=600)
+            await _wait_until(dut, lambda: int(dut.uo_out.value[7]) == 0, max_cycles=240)
+        except AssertionError as exc:
+            raise AssertionError(
+                "Speed profile failure: "
+                f"dmac={dmac_speed}, src={src_speed}, dest={dest_speed}, "
+                f"direction={direction}, mode={mode}, "
+                f"src_addr=0x{src_addr:02X}, dst_addr=0x{dst_addr:02X}, payload={payload}; {exc}"
+            ) from exc
