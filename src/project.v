@@ -47,7 +47,7 @@ module tt_auth_dmac (
     reg [2:0] next_state;
 
     localparam [2:0] IDLE       = 3'b000;
-    localparam [2:0] PREPERATION = 3'b001;
+    localparam [2:0] PREPARATION = 3'b001;
     localparam [2:0] WAIT4BG    = 3'b010;
     localparam [2:0] SRC_SEND   = 3'b011;
     localparam [2:0] RECEIVE    = 3'b100;
@@ -122,8 +122,8 @@ module tt_auth_dmac (
 
                     done <= 1'b0;
                 end
-                PREPERATION: begin
-                    case (prep_cntr) // preperation sequence
+                PREPARATION: begin
+                    case (prep_cntr) // preparation sequence
                         2'b00: begin
                             src_addr[3:0] <= cfg_in[3:0];
                             mode <= cfg_in[4];
@@ -204,9 +204,9 @@ module tt_auth_dmac (
 
         case (current_state)
             IDLE: begin
-              if (enable) next_state = PREPERATION;
+              if (enable) next_state = PREPARATION;
             end
-            PREPERATION: begin
+            PREPARATION: begin
                 if (prep_cntr == 2'b11) next_state = WAIT4BG;
             end
             WAIT4BG: begin
@@ -245,7 +245,7 @@ module tt_auth_dmac (
         case (current_state)
             IDLE: begin
             end
-            PREPERATION: begin
+            PREPARATION: begin
             end
             WAIT4BG: begin
                 BR = 1'b1; // send BR to CPU
