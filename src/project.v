@@ -22,18 +22,19 @@ module tt_um_AUTH_DMA_CONTROLLER (
     reg done;
     reg REQ ; 
     reg ALE;
-    reg bus_dir;
-
+    reg Write_dir;	//0 for MEMORY -> IO write 1 for IO -> MEMORY write 
+	reg io_dir; //Direction of Bidirectional BUS
+  
     localparam IDLE = 3'b000;
     localparam CONFIGURATION = 3'b001;
   	localparam HANDSHAKE = 3'b010;	
     localparam DMA2SRC = 3'b011;	//Stelno stin mnimi ti thelo na paro
-    localparam SENDING = 3'b100;
+  	localparam SRC2DMA = 3'b100;
+    localparam DMA2DEST = 3'b101;
 
     reg [2:0] current_state, next_state;
     reg [2:0] counter;
     reg MODE ; //0 for single word transfer and 1 for burst mode
-    reg direction; //0 for MEMORY -> IO write 1 for IO -> MEMORY  
     reg [2:0] words_left;
     reg [7:0] src_addr;
     reg [7:0] dest_addr;
@@ -45,15 +46,16 @@ module tt_um_AUTH_DMA_CONTROLLER (
   
     //INPUTS
     wire BG;
-    wire Enable;
+//     wire Enable;
     wire ACK_async;
   	wire [3:0] cfg_in;
 
-  assign Enable = ui_in[7];
+//   assign Enable = ui_in[7];
   assign BG = ui_in[6];
   assign ACK_async = ui_in[5];
   assign cfg_in = ui_in[3:0];
 
+  wire ACK_sync = ACK_sync_ff2 ;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -64,11 +66,11 @@ module tt_um_AUTH_DMA_CONTROLLER (
           	data <= 8'b00000000;
           	transfer_bus_out <= 8'b00000000;
             ACK_sync_ff1 <= 1'b0;
-            ACK_sync_ff1 <= 1'b0;
+            ACK_sync_ff2 <= 1'b0;
         end 
         else begin
             current_state <= next_state;
-            ACK_sync_ff1 <= ACK_sync;
+            ACK_sync_ff1 <= ACK_async;
             ACK_sync_ff2 <= ACK_sync_ff1;
 
           if (next_state != current_state || current_state==IDLE) begin
@@ -81,7 +83,7 @@ module tt_um_AUTH_DMA_CONTROLLER (
           	//To ypoloipo sequential Logic
           case(current_state) 
             IDLE: begin
-              if (Enable) begin
+              if (ui_in[7]) begin //If enable
                 src_addr[3:0] <= cfg_in;
                 MODE <= ui_in[4];
             	end
@@ -89,6 +91,7 @@ module tt_um_AUTH_DMA_CONTROLLER (
               
              CONFIGURATION: begin
                if (counter == 0) begin
+                 Write_dir <= ui_in[7];
                  src_addr[7:4] <= cfg_in;
                end
                
@@ -100,6 +103,11 @@ module tt_um_AUTH_DMA_CONTROLLER (
                  dest_addr[7:4] <= cfg_in;
                end
              end
+            
+            SRC2DMA: begin
+               if (ACK_sync)
+                 data <= uio_in;	//If ACK_sync get the data from the source 
+            end
               
 
             endcase
@@ -107,14 +115,12 @@ module tt_um_AUTH_DMA_CONTROLLER (
         end
     end
 
-  wire fetch_sync = fetch_sync_ff2;
-
     always @* begin: NEXT_STATE_LOGIC
         next_state = current_state;
 
         case (current_state)
             IDLE: begin
-                if (Enable) begin
+                if (ui_in[7]) begin //If enable
                     next_state = CONFIGURATION;
                 end
             end
@@ -130,11 +136,13 @@ module tt_um_AUTH_DMA_CONTROLLER (
               end
 
             DMA2SRC: begin
-               
+              if (ACK_sync)
+                next_state = SRC2DMA;
             end
 
-            SENDING: begin
-               
+            SRC2DMA: begin
+               if (ACK_sync)
+                 next_state = DMA2DEST;
             end
 
             default: begin
@@ -153,16 +161,23 @@ module tt_um_AUTH_DMA_CONTROLLER (
           	DMA2SRC: begin
                 WRITE_en = 0;
               	REQ = 1 ;
+              	io_dir = 1 ;
               	transfer_bus_out = src_addr;
-              	
+            end
+          
+          SRC2DMA: begin
+              	io_dir = 0;
+            	REQ = 0;
+            if (ACK_sync)
+              REQ = 1;	//When synchronising happens send back ACK towards SRC
             end
           
         endcase
     end
 
-  assign uo_out = {2'b00, bus_dir, ALE, REQ , done, WRITE_en, BR};
+          assign uo_out = {2'b00, Write_dir, ALE, REQ , done, WRITE_en, BR};
     assign uio_out = transfer_bus_out;
-    assign uio_oe = bus_dir ? 8'hFF : 8'h00;
+    assign uio_oe = io_dir ? 8'hFF : 8'h00;
 
     wire _unused = &{ena, 1'b0};
 
