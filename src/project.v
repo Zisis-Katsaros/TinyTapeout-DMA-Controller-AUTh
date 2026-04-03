@@ -27,7 +27,7 @@ module tt_um_AUTH_DMA_CONTROLLER (
     localparam IDLE = 3'b000;
     localparam CONFIGURATION = 3'b001;
   	localparam HANDSHAKE = 3'b010;	
-    localparam RECEIVING = 3'b011;
+    localparam DMA2SRC = 3'b011;	//Stelno stin mnimi ti thelo na paro
     localparam SENDING = 3'b100;
 
     reg [2:0] current_state, next_state;
@@ -117,10 +117,10 @@ module tt_um_AUTH_DMA_CONTROLLER (
           
             HANDSHAKE: begin
                 if (BG)
-                  next_state = RECEIVING;
+                  next_state = DMA2SRC;
               end
 
-            RECEIVING: begin
+            DMA2SRC: begin
                
             end
 
@@ -141,8 +141,12 @@ module tt_um_AUTH_DMA_CONTROLLER (
                 BR = 1;    
             end
           
-          	RECEIVING: begin
-                WRITE_en = 0;   
+          	DMA2SRC: begin
+                WRITE_en = 0;
+              	valid = 1 ;
+                bus_dir = 1;
+              	transfer_bus_out = src_addr;
+              	
             end
           
         endcase
