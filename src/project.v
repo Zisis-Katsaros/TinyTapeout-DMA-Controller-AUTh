@@ -28,6 +28,7 @@ module tt_auth_dmac (
     reg done;
     reg valid;
     reg ack;
+    reg target; // 0: mem, 1: io
     reg transfer_drive;
     reg [7:0] transfer_bus_out;
 
@@ -70,7 +71,8 @@ module tt_auth_dmac (
     assign uo_out[5] = done;
     assign uo_out[4] = valid;
     assign uo_out[3] = ack;
-    assign uo_out[2:0] = 3'b000;
+    assign uo_out[2] = target;
+    assign uo_out[1:0] = 2'b00;
 
     assign uio_out = transfer_bus_out;
     assign uio_oe = {8{transfer_drive}};
@@ -243,6 +245,7 @@ module tt_auth_dmac (
         BR = 1'b0;
         WRITE_en = 1'b0;
         valid = 1'b0;
+        target = 1'b0;
         transfer_drive = 1'b0;
         transfer_bus_out = 8'h00;
 
@@ -257,6 +260,8 @@ module tt_auth_dmac (
             SRC_SEND: begin
                 BR = 1'b1;
                 WRITE_en = 1'b0;
+                // direction=0: send to mem, direction=1: send to io
+                target = direction;
                 transfer_drive = 1'b1; // set bidir to output
                 transfer_bus_out = src_addr;
 
@@ -271,6 +276,8 @@ module tt_auth_dmac (
             SENDaddr: begin
                 BR = 1'b1;
                 WRITE_en = 1'b1;
+                // direction=0: send to io, direction=1: send to mem
+                target = ~direction;
                 transfer_drive = 1'b1; // set bidir to output
                 transfer_bus_out = dst_addr;
 
@@ -280,6 +287,8 @@ module tt_auth_dmac (
             SENDdata: begin
                 BR = 1'b1;
                 WRITE_en = 1'b1; 
+                // direction=0: send to io, direction=1: send to mem
+                target = ~direction;
                 transfer_drive = 1'b1; // set bidir to output
                 transfer_bus_out = data_buffer;
 
