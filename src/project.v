@@ -20,7 +20,7 @@ module tt_um_AUTH_DMA_CONTROLLER (
   	reg BR;
     reg WRITE_en;
     reg done;
-    reg valid;
+    reg REQ ; 
     reg ALE;
     reg bus_dir;
 
@@ -143,8 +143,7 @@ module tt_um_AUTH_DMA_CONTROLLER (
           
           	DMA2SRC: begin
                 WRITE_en = 0;
-              	valid = 1 ;
-                bus_dir = 1;
+              	REQ = 1 ;
               	transfer_bus_out = src_addr;
               	
             end
@@ -152,7 +151,7 @@ module tt_um_AUTH_DMA_CONTROLLER (
         endcase
     end
 
-    assign uo_out = {2'b00, bus_dir, ALE, valid, done, WRITE_en, BR};
+  assign uo_out = {2'b00, bus_dir, ALE, REQ , done, WRITE_en, BR};
     assign uio_out = transfer_bus_out;
     assign uio_oe = bus_dir ? 8'hFF : 8'h00;
 
