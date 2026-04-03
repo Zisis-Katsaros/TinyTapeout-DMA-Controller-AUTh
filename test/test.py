@@ -161,23 +161,27 @@ async def _init_clock(dut):
 
 
 async def _start_clock_with_phase(signal, period_ps, phase_ps):
-    if phase_ps > 0:
-        await Timer(phase_ps, unit="ps")
+    if phase_ps != 0:
+        pos_phase_ps = phase_ps if phase_ps > 0 else period_ps + phase_ps
+        await Timer(pos_phase_ps, unit="ps")
     clock = Clock(signal, period_ps, unit="ps")
     await clock.start()
 
-
-def _random_even_period_ps(rng, nominal_ps, low_scale=0.8, high_scale=1.2):
+# Helper function to generate random (even) periods
+def _random_even_period_ps(rng, nominal_ps, span_percent=20):
+    low_scale = 1 - span_percent / 100
+    high_scale = 1 + span_percent / 100
     period = int(nominal_ps * rng.uniform(low_scale, high_scale))
     return max(2, period - (period % 2))
 
 
-async def _init_random_clocks(dut, rng):
+# Initialize clock domains with randomized frequencies
+async def _init_random_clocks(dut, rng, span_percent=20):
     # Randomize each domain around nominal values with practical margins.
     # Nominal periods in ps: 10us, 12.5us, 8.33us
-    dmac_period = _random_even_period_ps(rng, 10_000_000)
-    mem_period = _random_even_period_ps(rng, 12_500_000)
-    io_period = _random_even_period_ps(rng, 8_330_000)
+    dmac_period = _random_even_period_ps(rng, 10_000_000, span_percent)
+    mem_period = _random_even_period_ps(rng, 12_500_000, span_percent)
+    io_period = _random_even_period_ps(rng, 8_330_000, span_percent)
 
     # Random startup phase offsets create inter-domain phase differences.
     dmac_phase = 0
@@ -227,11 +231,12 @@ async def test_burst4_mode(dut):
     await _wait_until(dut, lambda: int(dut.uo_out.value[5]) == 1, max_cycles=300)
     await _wait_until(dut, lambda: int(dut.uo_out.value[7]) == 0, max_cycles=120)
 
-
+# Clock domains with randomized frequencies and starting phases stress test
 @cocotb.test()
 async def test_randomized_clock_and_transfer_stress(dut):
     rng = random.Random()
-    await _init_random_clocks(dut, rng)
+    span_percent = 20  # frequency variation
+    await _init_random_clocks(dut, rng, span_percent)
 
     for _ in range(100):
         await _reset_dut(dut)
