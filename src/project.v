@@ -27,6 +27,7 @@ module tt_auth_dmac (
     reg WRITE_en;
     reg done;
     reg valid;
+    reg ack;
     reg transfer_drive;
     reg [7:0] transfer_bus_out;
 
@@ -68,7 +69,8 @@ module tt_auth_dmac (
     assign uo_out[6] = WRITE_en;
     assign uo_out[5] = done;
     assign uo_out[4] = valid;
-    assign uo_out[3:0] = 4'b0000;
+    assign uo_out[3] = ack;
+    assign uo_out[2:0] = 3'b000;
 
     assign uio_out = transfer_bus_out;
     assign uio_oe = {8{transfer_drive}};
@@ -98,6 +100,7 @@ module tt_auth_dmac (
             data_buffer <= 8'h00;
             words_left <= 2'b00;
             done <= 1'b0;
+            ack <= 1'b0;
 
             // reset FSM state
             current_state <= IDLE;
@@ -111,6 +114,9 @@ module tt_auth_dmac (
             // Update FSM state
             current_state <= next_state;
 
+            // Pulse ack when the DMAC samples a return signal
+            ack <= rtrn_rise;
+
             // State-specific sequential logic
             case (current_state)
                 IDLE: begin
@@ -119,8 +125,6 @@ module tt_auth_dmac (
                     src_send_cntr <= 1'b0;
                     dst_addr_cntr <= 1'b0;
                     dst_data_cntr <= 1'b0;
-
-                    done <= 1'b0;
                 end
                 PREPARATION: begin
                     case (prep_cntr) // preparation sequence
@@ -275,7 +279,7 @@ module tt_auth_dmac (
             end
             SENDdata: begin
                 BR = 1'b1;
-                WRITE_en = 1'b1;
+                WRITE_en = 1'b1; 
                 transfer_drive = 1'b1; // set bidir to output
                 transfer_bus_out = data_buffer;
 
