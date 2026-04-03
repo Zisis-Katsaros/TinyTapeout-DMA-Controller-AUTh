@@ -38,8 +38,10 @@ module tt_auth_dmac (
     reg [7:0] src_addr;
     reg [7:0] dst_addr;
     reg [7:0] data_buffer;
+
+    // Counters
     reg [1:0] prep_cntr;
-    reg src_send_cntr;
+    reg [1:0] src_send_cntr;
     reg dst_addr_cntr;
     reg dst_data_cntr;
     reg [1:0] words_left;
@@ -61,11 +63,13 @@ module tt_auth_dmac (
     wire rtrn_sync;
     wire rtrn_rise;
 
+    // Input Mapping
     assign start = ui_in[7];
     assign BG = ui_in[6];
     assign rtrn = ui_in[5];
     assign cfg_in = ui_in[4:0];
 
+    // Output Mapping
     assign uo_out[7] = BR;
     assign uo_out[6] = WRITE_en;
     assign uo_out[5] = done;
@@ -74,9 +78,11 @@ module tt_auth_dmac (
     assign uo_out[2] = target;
     assign uo_out[1:0] = 2'b00;
 
+    // BIDIR Mapping
     assign uio_out = transfer_bus_out;
     assign uio_oe = {8{transfer_drive}};
 
+    // rtrn synchronizer and pulse generator
     assign rtrn_sync = rtrn_ff2;
     assign rtrn_rise = rtrn_sync & ~rtrn_ff2_d;
 
@@ -90,7 +96,7 @@ module tt_auth_dmac (
 
             // reset counters
             prep_cntr <= 2'b00;
-            src_send_cntr <= 1'b0;
+            src_send_cntr <= 2'b0;
             dst_addr_cntr <= 1'b0;
             dst_data_cntr <= 1'b0;
 
@@ -124,7 +130,7 @@ module tt_auth_dmac (
                 IDLE: begin
                     // reset counters
                     prep_cntr <= 2'b00; 
-                    src_send_cntr <= 1'b0;
+                    src_send_cntr <= 2'b0;
                     dst_addr_cntr <= 1'b0;
                     dst_data_cntr <= 1'b0;
                 end
@@ -153,7 +159,7 @@ module tt_auth_dmac (
                     if (prep_cntr != 2'b11) prep_cntr <= prep_cntr + 2'b01;
                 end
                 WAIT4BG: begin
-                    src_send_cntr <= 1'b0;
+                    src_send_cntr <= 2'b0;
                     dst_addr_cntr <= 1'b0;
                     dst_data_cntr <= 1'b0;
                 end
@@ -162,10 +168,10 @@ module tt_auth_dmac (
                     dst_data_cntr <= 1'b0;
 
                     // update src_addr send counter
-                    if (src_send_cntr == 1'b0) src_send_cntr <= 1'b1; 
+                    if (src_send_cntr != 2'b10) src_send_cntr <= src_send_cntr + 1'b1;
                 end
                 RECEIVE: begin
-                    src_send_cntr <= 1'b0;
+                    src_send_cntr <= 2'b0;
                     dst_addr_cntr <= 1'b0;
                     dst_data_cntr <= 1'b0;
 
@@ -173,7 +179,7 @@ module tt_auth_dmac (
                     if (rtrn_rise) data_buffer <= uio_in; 
                 end
                 SENDaddr: begin
-                    src_send_cntr <= 1'b0;
+                    src_send_cntr <= 2'b0;
                     dst_data_cntr <= 1'b0;
 
                     // update dest_addr send counter
@@ -181,7 +187,7 @@ module tt_auth_dmac (
                     else if (rtrn_rise) dst_addr_cntr <= 1'b0;
                 end
                 SENDdata: begin
-                    src_send_cntr <= 1'b0;
+                    src_send_cntr <= 2'b0;
                     dst_addr_cntr <= 1'b0;
 
                     // update dest_data send counter
@@ -197,7 +203,7 @@ module tt_auth_dmac (
                     end
                 end
                 default: begin
-                    src_send_cntr <= 1'b0;
+                    src_send_cntr <= 2'b0;
                     dst_addr_cntr <= 1'b0;
                     dst_data_cntr <= 1'b0;
                 end
@@ -219,7 +225,7 @@ module tt_auth_dmac (
                 if (BG) next_state = SRC_SEND;
             end
             SRC_SEND: begin
-                if(src_send_cntr == 1'b1) next_state = RECEIVE;
+                if(src_send_cntr == 2'b10) next_state = RECEIVE;
             end
             RECEIVE: begin
                 if (rtrn_rise) next_state = SENDaddr;
@@ -266,7 +272,7 @@ module tt_auth_dmac (
                 transfer_bus_out = src_addr;
 
                 // after one cycle send valid
-                if(src_send_cntr == 1'b1) valid = 1'b1; 
+                if(src_send_cntr != 2'b0) valid = 1'b1; 
             end
             RECEIVE: begin
                 BR = 1'b1;

@@ -109,7 +109,7 @@ async def _run_transfer_sequence(dut, src_addr, dst_addr, payload, direction, ph
 
         # RECEIVE phase: source returns data, signaled by rtrn rising edge.
         dut.uio_in.value = datum
-        await _pulse_rtrn(dut, sender=receive_sender, bg=1, pre_cycles=4)
+        await _pulse_rtrn(dut, sender=receive_sender, bg=1, pre_cycles=3)
 
         # SENDaddr phase: DMA presents destination address with valid and WRITE_en=1.
         await _wait_until(
@@ -126,7 +126,7 @@ async def _run_transfer_sequence(dut, src_addr, dst_addr, payload, direction, ph
             f"expected 0x{exp_dst:02X}"
         )
 
-        await _pulse_rtrn(dut, sender=send_sender, bg=1, pre_cycles=4)
+        await _pulse_rtrn(dut, sender=send_sender, bg=1, pre_cycles=3)
 
         # SENDdata phase: DMA presents captured data with valid and WRITE_en=1.
         await _wait_until(
@@ -142,7 +142,7 @@ async def _run_transfer_sequence(dut, src_addr, dst_addr, payload, direction, ph
             f"DST payload mismatch at beat {i}: got 0x{int(dut.uio_out.value):02X}, "
             f"expected 0x{(datum & 0xFF):02X}"
         )
-        await _pulse_rtrn(dut, sender=send_sender, bg=1, pre_cycles=4)
+        await _pulse_rtrn(dut, sender=send_sender, bg=1, pre_cycles=3)
 
 
 async def _init_clock(dut):
