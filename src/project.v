@@ -39,16 +39,19 @@ module tt_um_AUTH_DMA_CONTROLLER (
     reg [7:0] dest_addr;
     reg [7:0] data;
     reg [7:0] transfer_bus_out;
+
+    //2-FF synchronizer in local clk domain
+    reg ACK_sync_ff1, ACK_sync_ff2;
   
     //INPUTS
     wire BG;
     wire Enable;
-    wire fetch;
+    wire ACK_async;
   	wire [3:0] cfg_in;
 
   assign Enable = ui_in[7];
   assign BG = ui_in[6];
-  assign fetch = ui_in[5];
+  assign ACK_async = ui_in[5];
   assign cfg_in = ui_in[3:0];
 
 
@@ -60,9 +63,13 @@ module tt_um_AUTH_DMA_CONTROLLER (
           	dest_addr <= 8'b00000000;
           	data <= 8'b00000000;
           	transfer_bus_out <= 8'b00000000;
+            ACK_sync_ff1 <= 1'b0;
+            ACK_sync_ff1 <= 1'b0;
         end 
         else begin
             current_state <= next_state;
+            ACK_sync_ff1 <= ACK_sync;
+            ACK_sync_ff2 <= ACK_sync_ff1;
 
           if (next_state != current_state || current_state==IDLE) begin
                 counter <= 3'b000;
@@ -99,6 +106,8 @@ module tt_um_AUTH_DMA_CONTROLLER (
           
         end
     end
+
+  wire fetch_sync = fetch_sync_ff2;
 
     always @* begin: NEXT_STATE_LOGIC
         next_state = current_state;
