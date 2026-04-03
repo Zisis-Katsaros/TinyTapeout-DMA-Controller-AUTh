@@ -30,8 +30,9 @@ module tt_um_AUTH_DMA_CONTROLLER (
   	localparam HANDSHAKE = 3'b010;	
     localparam DMA2SRC = 3'b011;	//Stelno stin mnimi ti thelo na paro
   	localparam SRC2DMA = 3'b100;
-    localparam DMA2DEST = 3'b101;
-
+    localparam DMA2DEST_addr = 3'b101;
+	localparam DMA2DEST_data = 3'b110;	 	
+  
     reg [2:0] current_state, next_state;
     reg [2:0] counter;
     reg MODE ; //0 for single word transfer and 1 for burst mode
@@ -142,7 +143,12 @@ module tt_um_AUTH_DMA_CONTROLLER (
 
             SRC2DMA: begin
                if (ACK_sync)
-                 next_state = DMA2DEST;
+                 next_state = DMA2DEST_addr;
+            end
+          
+          	DMA2DEST_addr: begin
+              if (ACK_sync)
+                next_state = DMA2DEST_data;
             end
 
             default: begin
@@ -159,6 +165,7 @@ module tt_um_AUTH_DMA_CONTROLLER (
             end
           
           	DMA2SRC: begin
+              	BR = 0; 
                 WRITE_en = 0;
               	REQ = 1 ;
               	io_dir = 1 ;
@@ -171,6 +178,19 @@ module tt_um_AUTH_DMA_CONTROLLER (
             if (ACK_sync)
               REQ = 1;	//When synchronising happens send back ACK towards SRC
             end
+          
+          DMA2DEST_addr: begin
+            io_dir = 1;
+            WRITE_en = 1;
+            transfer_bus_out = dest_addr;
+            REQ = 1;	
+          end
+          
+          DMA2DEST_data: begin
+            io_dir=1;
+            transfer_bus_out = data;
+            REQ = 1; 
+          end
           
         endcase
     end
