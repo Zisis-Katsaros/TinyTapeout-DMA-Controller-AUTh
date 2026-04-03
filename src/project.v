@@ -17,7 +17,7 @@ module tt_auth_dmac (
 );
 
     // Inputs
-    wire       enable;
+    wire       start;
     wire       BG;
     wire       rtrn;
     wire [4:0] cfg_in;
@@ -59,7 +59,7 @@ module tt_auth_dmac (
     wire rtrn_sync;
     wire rtrn_rise;
 
-    assign enable = ui_in[7];
+    assign start = ui_in[7];
     assign BG = ui_in[6];
     assign rtrn = ui_in[5];
     assign cfg_in = ui_in[4:0];
@@ -204,7 +204,7 @@ module tt_auth_dmac (
 
         case (current_state)
             IDLE: begin
-              if (enable) next_state = PREPARATION;
+              if (start) next_state = PREPARATION;
             end
             PREPARATION: begin
                 if (prep_cntr == 2'b11) next_state = WAIT4BG;
