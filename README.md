@@ -2,11 +2,11 @@
 
 <div align="center">
 
-Aristotle University of Thessaloniki - Department of Electrical and Computer Engineering
+## Aristotle University of Thessaloniki - Department of Electrical and Computer Engineering
 
 # 8-bit DMA Controller for TinyTapeout SKY 26a Shuttle
 
-## Authors
+### Authors
 
 Spiridon Basiliou  
 Zaphirios Giapoutzis  
@@ -14,11 +14,11 @@ Athanasios Karatzas
 Zisis Katsaros  
 Kiriakos Kokkinos
 
-## Supervising Professor
+### Supervising Professor
 
 Vasilios Pavlidis
 
-## Lab Assistant
+### Lab Assistant
 
 Evanggelos Tzouvaras
 
@@ -28,7 +28,7 @@ Evanggelos Tzouvaras
 
 This repository is the submission of the above-mentioned students for the Tiny Tapeout SKY 26a Shuttle. The project implements an 8-bit DMA controller that transfers data from a memory module to an I/O device. The memory module and the I/O device operate in separate clock domains, as does the DMA controller.
 
-We would like to thank the Aristotle University of Thessaloniki and especially Professor Pavlidis for the opportunity to apply our knowledge to this project. We also thank Evanggelos Tzouvaras for his valuable assistance.
+We would like to thank the Aristotle University of Thessaloniki and especially prof. Pavlidis for the opportunity to apply our knowledge to this project. We also thank Evanggelos Tzouvaras for his valuable assistance.
 
 ## Documentation
 
