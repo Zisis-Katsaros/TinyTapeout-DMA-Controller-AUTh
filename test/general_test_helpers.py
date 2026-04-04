@@ -53,7 +53,7 @@ async def _send_cfg(dut, mode, direction, src_addr, dst_addr):
     # Pull start down and wait for DMAC BR before CPU grants bus (BG).
     dut.ui_in.value = _pack_ui(start=0, bg=0, rtrn=0, cfg=0)
     await _wait_until(dut, lambda: int(dut.uo_out.value[7]) == 1, max_cycles=120)
-    await ClockCycles(dut.clk, 2)
+    await ClockCycles(dut.clk, 2) # wait arbitrary number of cycles before sending BG
     dut.ui_in.value = _pack_ui(start=0, bg=1, rtrn=0, cfg=0)
 
 

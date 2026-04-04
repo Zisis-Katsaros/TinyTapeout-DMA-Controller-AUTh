@@ -39,7 +39,7 @@ module tb ();
   end
 
   // Replace tt_um_example with your module name:
-  tt_auth_dmac dut (
+  tt_um_auth_dmac dut (
 
       // Include power ports for the Gate Level test:
 `ifdef GL_TEST
