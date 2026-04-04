@@ -11,10 +11,10 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## Contents
 
-- [Overview](#overview)
-- [I/O Configuration](#io-configuration)
-- [State Diagram](#state-diagram)
-- [How to test](#how-to-test)
+- Overview
+- I/O Configuration
+- State Diagram
+- How to test
 
 ## Overview
 
@@ -70,7 +70,7 @@ The I/O pins are configured as follows.
 
 Notes:
 
-- In the state diagram above, `rtrn_rise` is an internal pulse generated when `rtrn` rises to high.
+- In the state diagram above, `rtrn_rise` is an internal pulse generated shortly after `rtrn` rises to high.
 - `wrds_lft` is not an actual signal; it indicates whether there are still words left to transfer in four-word burst mode.
 
 ## How to test
