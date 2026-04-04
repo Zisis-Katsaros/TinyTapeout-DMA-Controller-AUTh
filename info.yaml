@@ -3,7 +3,7 @@ project:
   title:        "AUTh DMA Controller"      # Project title
   author:       ""      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "DMA Controller for transferring data between memory and I/O device"      # One line description of what your project does
+  description:  "8-bit DMA Controller for transferring data between memory and I/O device"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     0       # Clock frequency in Hz (or 0 if not applicable)
 
