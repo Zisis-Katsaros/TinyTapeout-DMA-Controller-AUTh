@@ -14,6 +14,7 @@ You can also include images in this folder and reference them in the markdown. E
 - [Overview](#overview)
 - [I/O Configuration](#io-configuration)
 - [State Diagram](#state-diagram)
+- [How to test](#how-to-test)
 
 ## Overview
 
@@ -72,3 +73,4 @@ Notes:
 - In the state diagram above, `rtrn_rise` is an internal pulse generated when `rtrn` rises to high.
 - `wrds_lft` is not an actual signal; it indicates whether there are still words left to transfer in four-word burst mode.
 
+## How to test
