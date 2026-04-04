@@ -85,6 +85,7 @@ module tt_um_auth_dmac (
     // rtrn synchronizer and pulse generator
     assign rtrn_sync = rtrn_ff2;
     assign rtrn_rise = rtrn_sync & ~rtrn_ff2_d;
+    // assign rtrn_rise = rtrn_ff1 & ~rtrn_ff2; 
 
     
     always @(posedge clk or negedge rst_n) begin: SEQUENTIAL_LOGIC
