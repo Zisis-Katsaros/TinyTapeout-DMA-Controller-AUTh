@@ -1,10 +1,12 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
 
-# Aristotle University of Thessaloniki - Department of Electrical and Computer Engineering
+<div align="center">
 
-## 8-bit DMA Controller for TinyTapeout SKY 26a Shuttle
+Aristotle University of Thessaloniki - Department of Electrical and Computer Engineering
 
-### Authors
+# 8-bit DMA Controller for TinyTapeout SKY 26a Shuttle
+
+## Authors
 
 Spiridon Basiliou  
 Zaphirios Giapoutzis  
@@ -12,13 +14,15 @@ Athanasios Karatzas
 Zisis Katsaros  
 Kiriakos Kokkinos
 
-### Supervising Professor
+## Supervising Professor
 
 Vasilios Pavlidis
 
-### Lab Assistant
+## Lab Assistant
 
 Evanggelos Tzouvaras
+
+</div>
 
 ## Overview
 
