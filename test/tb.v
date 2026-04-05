@@ -21,7 +21,7 @@ module tb ();
   reg clk;
   reg rst_n;
   reg ena;
-  reg [7:0] ui_in;
+  reg [4:0] ui_in;
   //reg [7:0] uio_in;
   wire [7:0] uo_out;
   wire [7:0] uio_out;
@@ -40,7 +40,7 @@ module tb ();
       .VGND(VGND),
 `endif
 
-      .ui_in  (ui_in),    // Dedicated inputs
+      .ui_in  ({ui_in[4:3], (fetch_io || fetch_mem), ui_in[2:0], IO_ack, MEM_ack}),    // Dedicated inputs
       .uo_out (uo_out),   // Dedicated outputs
       .uio_in (DMA_data_out_mem),   // IOs: Input path
       .uio_out(uio_out),  // IOs: Output path
