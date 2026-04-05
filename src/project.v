@@ -289,7 +289,7 @@ module tt_um_example_zafeiris (
 
       DMA_to_DEST_addr: if (DEST_ack_sync2) next_state = DELAY; else next_state = DMA_to_DEST_addr;
 
-      DELAY           : if (cnt == 100) next_state = DMA_to_DEST_data; else next_state = DELAY;
+      DELAY           : if (!DEST_ack_sync2) next_state = DMA_to_DEST_data; else next_state = DELAY;  // Before: cnt == 100
 
       DMA_to_DEST_data: if (DEST_ack_sync2) next_state = DONE; else next_state = DMA_to_DEST_data;
       

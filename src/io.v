@@ -263,7 +263,7 @@ module io (output reg fetch, output reg IO_ack, output wire [7:0] DMA_data_out, 
         
             WAITING     : if (BG_sync2) next_state = ROLE; else next_state = WAITING; // if we took BG we took mode and direction as well, it is sent last
 
-            ROLE        : if (!direction_sync2) next_state = SOURCE1; else if (direction_sync2) next_state = DESTINATION1; else next_state = ROLE;
+            ROLE        : if (direction_sync2) next_state = SOURCE1; else if (!direction_sync2) next_state = DESTINATION1; else next_state = ROLE;
 
             SOURCE1     : if (valid_sync2 && !WRITE_en_sync2) next_state = ACKNOWLEDGMENT; else next_state = SOURCE1;
 

@@ -14,7 +14,7 @@ module tb ();
   initial begin
     $dumpfile("tb.fst");
     $dumpvars(0, tb);
-    #1;
+    #1; 
   end
 
   // Wire up the inputs and outputs:
@@ -22,7 +22,7 @@ module tb ();
   reg rst_n;
   reg ena;
   reg [7:0] ui_in;
-  reg [7:0] uio_in;
+  //reg [7:0] uio_in;
   wire [7:0] uo_out;
   wire [7:0] uio_out;
   wire [7:0] uio_oe;
@@ -42,7 +42,7 @@ module tb ();
 
       .ui_in  (ui_in),    // Dedicated inputs
       .uo_out (uo_out),   // Dedicated outputs
-      .uio_in (uio_in),   // IOs: Input path
+      .uio_in (DMA_data_out_mem),   // IOs: Input path
       .uio_out(uio_out),  // IOs: Output path
       .uio_oe (uio_oe),   // IOs: Enable path (active high: 0=input, 1=output)
       .ena    (ena),      // enable - goes high when design is selected
@@ -52,8 +52,7 @@ module tb ();
 
   reg clk_mem;
   //reg rst_n;
-  wire [7:0] ins_mem;
-  wire [7:0] data_mem;
+  wire [7:0] DMA_data_out_mem;
   wire fetch_mem;
   wire MEM_ack;
 // `ifdef GL_TEST
@@ -72,16 +71,16 @@ module tb ();
 
       .fetch  (fetch_mem),    // Dedicated inputs
       .MEM_ack (MEM_ack),   // Dedicated outputs
-      .data (data_mem),   // IOs: Input path
-      .ins(ins_mem),  // IOs: Output path
+      .DMA_data_out (DMA_data_out_mem),   // IOs: Output path
+      .DMA_data_in (uio_out),   // IOs: Output path
+      .ins(uo_out[6:0]),  // IOs: Output path
       .clk    (clk_mem),      // clock
       .rst_n  (rst_n)     // not reset
   );
 
   reg clk_io;
   //reg rst_n;
-  wire [7:0] ins_io;
-  wire [7:0] data_io;
+  wire [7:0] DMA_data_out_io;
   wire fetch_io;
   wire IO_ack;
 // `ifdef GL_TEST
@@ -99,8 +98,9 @@ module tb ();
 
       .fetch  (fetch_io),    // Dedicated inputs
       .IO_ack (IO_ack),   // Dedicated outputs
-      .data (data_io),   // IOs: Input path
-      .ins(ins_io),  // IOs: Output path
+      .DMA_data_out (DMA_data_out_io),   // IOs: Input path
+      .DMA_data_in (uio_out),   // IOs: Input path
+      .ins(uo_out[6:0]),  // IOs: Output path
       .clk    (clk_io),      // clock
       .rst_n  (rst_n)     // not reset
   );
