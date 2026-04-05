@@ -6,15 +6,6 @@
 */
 module tb ();
 
-
-  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
-  initial begin
-    $dumpfile("tb.fst");
-    $dumpvars(0, tb);
-    #1;
-  end
-
-
   // Wire up the inputs and outputs:
   reg clk;        // DMAC/CPU clock
   reg mem_clk;    // Memory clock
