@@ -102,16 +102,16 @@ module tt_um_example_zafeiris (
 
   // Reg_file to hold source_addr and dest_addr
 
-  reg [3:0] regs_for_addr [3:0];
+  reg [1:0] regs_for_addr [7:0];
   reg regs [1:0];
 
   reg [7:0] source_addr, dest_addr;
 
-  reg [3:0] b4_config_address;
+  reg [1:0] b4_config_address;
   reg data;
   reg [7:0] data2;
 
-  reg [1:0] address1;
+  reg [2:0] address1;
   reg address2;
 
   reg write, write2, write3; // Using this to change the regs data only when we want, else they are left with the last value
@@ -129,8 +129,8 @@ module tt_um_example_zafeiris (
     if (!rst_n)
     begin
 
-      for (i=0; i<4; i++)
-        regs_for_addr[i] <= 4'b0;
+      for (i=0; i<8; i++)
+        regs_for_addr[i] <= 2'b0;
 
     end
     else if (write)
@@ -142,8 +142,8 @@ module tt_um_example_zafeiris (
     else
     begin
 
-      source_addr <= {regs_for_addr[1], regs_for_addr[0]};
-      dest_addr <= {regs_for_addr[3], regs_for_addr[2]};
+      source_addr <= {regs_for_addr[3], regs_for_addr[2], regs_for_addr[1], regs_for_addr[0]};
+      dest_addr <= {regs_for_addr[7], regs_for_addr[6], regs_for_addr[5], regs_for_addr[4]};
 
     end
 
@@ -151,14 +151,16 @@ module tt_um_example_zafeiris (
 
   // regfile for direction, BG and mode
 
+  integer j;
+
   always @(posedge clk or negedge rst_n)
   begin
 
     if (!rst_n)
     begin
 
-      for (i=0; i<2; i++)
-        regs[i] <= 1'b0;
+      for (j=0; j<2; j++)
+        regs[j] <= 1'b0;
 
     end
     else if (write2)
@@ -277,7 +279,7 @@ module tt_um_example_zafeiris (
 
     case (current_state)
       
-      IDLE_PREPARATION: if (enable && cnt == 3) next_state = BUS_REQ; else next_state = IDLE_PREPARATION;
+      IDLE_PREPARATION: if (enable && cnt == 7) next_state = BUS_REQ; else next_state = IDLE_PREPARATION;
 
       BUS_REQ         : if (BG) next_state = DMA_to_SRC; else next_state = BUS_REQ;
 
@@ -339,12 +341,12 @@ module tt_um_example_zafeiris (
             write2 = 1;
 
             // Store the data in the proper regfile addresses 
-            address1 = 2'd0; // first 4 bits of source address
+            address1 = 3'd0; // first 2 bits of source address
             address2 = 1'd0; 
 
             // Get the input data
             data = ui_in[4]; // get mode
-            b4_config_address = ui_in[3:0];
+            b4_config_address = ui_in[3:2];
           
           end
 
@@ -355,12 +357,12 @@ module tt_um_example_zafeiris (
             write2 = 1;
 
             // Store the data in the proper regfile addresses 
-            address1 = 2'd1; // second 4 bits of source address
+            address1 = 3'd1; // second 2 bits of source address
             address2 = 1'd1; 
 
             // Get the input data
             data = ui_in[4]; // get direction
-            b4_config_address = ui_in[3:0];            
+            b4_config_address = ui_in[3:2];            
 
           end
 
@@ -371,10 +373,10 @@ module tt_um_example_zafeiris (
             write2 = 0;
 
             // Store the data in the proper regfile addresses 
-            address1 = 2'd2; // first 4 bits of dest address
+            address1 = 3'd2; // third 2 bits of dest address
 
             // Get the input data
-            b4_config_address = ui_in[3:0];
+            b4_config_address = ui_in[3:2];
 
           end
 
@@ -385,10 +387,66 @@ module tt_um_example_zafeiris (
             write2 = 0;
 
             // Store the data in the proper regfile addresses 
-            address1 = 2'd3; // second 4 bits of dest address
+            address1 = 3'd3; // fourth 2 bits of dest address
 
             // Get the input data
-            b4_config_address = ui_in[3:0];
+            b4_config_address = ui_in[3:2];
+
+          end
+
+          else if (cnt == 4)
+          begin
+
+            write = 1;
+            write2 = 0;
+
+            // Store the data in the proper regfile addresses 
+            address1 = 3'd4; // first 2 bits of dest address
+
+            // Get the input data
+            b4_config_address = ui_in[3:2];
+
+          end
+
+          else if (cnt == 5)
+          begin
+
+            write = 1;
+            write2 = 0;
+
+            // Store the data in the proper regfile addresses 
+            address1 = 3'd5; // second 2 bits of dest address
+
+            // Get the input data
+            b4_config_address = ui_in[3:2];
+
+          end
+
+          else if (cnt == 6)
+          begin
+
+            write = 1;
+            write2 = 0;
+
+            // Store the data in the proper regfile addresses 
+            address1 = 3'd6; // third 2 bits of dest address
+
+            // Get the input data
+            b4_config_address = ui_in[3:2];
+
+          end
+
+          else if (cnt == 7)
+          begin
+
+            write = 1;
+            write2 = 0;
+
+            // Store the data in the proper regfile addresses 
+            address1 = 3'd7; // fourth 2 bits of dest address
+
+            // Get the input data
+            b4_config_address = ui_in[3:2];
 
           end
       

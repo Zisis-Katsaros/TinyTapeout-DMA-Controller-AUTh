@@ -1,6 +1,6 @@
 `default_nettype none
 
-module io (output reg fetch, output reg IO_ack, inout wire [7:0] data, input [6:0] ins, input clk, input rst_n);
+module io (output reg fetch, output reg IO_ack, output wire [7:0] DMA_data_out, input wire [7:0] DMA_data_in, input [6:0] ins, input clk, input rst_n);
 
     wire BG, done, valid, WRITE_en, mode, direction, DMA_ack;
 
@@ -14,12 +14,12 @@ module io (output reg fetch, output reg IO_ack, inout wire [7:0] data, input [6:
 
     // -------- HANDLING THE BIDIRECTIONAL PORT -----------------
 
-    reg [7:0] data_out;
-    reg data_oe;   // output enable
-    wire [7:0] data_in;
+    // reg [7:0] data_out;
+    // reg data_oe;   // output enable
+    // wire [7:0] data_in;
 
-    assign data = data_oe ? data_out : 8'bz; // drive or high-Z
-    assign data_in = data;                   // read
+    // assign data = data_oe ? data_out : 8'bz; // drive or high-Z
+    // assign data_in = data;                   // read
 
     // ---------- END -----------------
 
@@ -295,7 +295,8 @@ module io (output reg fetch, output reg IO_ack, inout wire [7:0] data, input [6:
         fetch = 0;
         write_target_address = 0;
         regfile_write_data = 0;
-        data_oe = 0;
+        // data_oe = 0;
+        DMA_data_out = 0;
 
         case (current_state)
 
@@ -309,7 +310,7 @@ module io (output reg fetch, output reg IO_ack, inout wire [7:0] data, input [6:
                 if (valid_sync2 && !WRITE_en_sync2)
                 begin
 
-                    write_target_address = data_in; // we will have the data in
+                    write_target_address = DMA_data_in; // we will have the data in
                     write2 = 1; 
                     IO_ack = 1; // make this source acknowledgment
 
@@ -326,8 +327,8 @@ module io (output reg fetch, output reg IO_ack, inout wire [7:0] data, input [6:
                     regfile_address = read_target_address;
                 else
                 begin
-                    data_oe = 1;
-                    data_out = regfile_read_data;
+                    // data_oe = 1;
+                    DMA_data_out = regfile_read_data;
                     fetch = 1;
                 end
 
@@ -339,7 +340,7 @@ module io (output reg fetch, output reg IO_ack, inout wire [7:0] data, input [6:
                 if (valid_sync2 && WRITE_en_sync2)
                 begin
 
-                    write_target_address = data_in;
+                    write_target_address = DMA_data_in;
                     write2 = 1;
                     IO_ack = 1; // must become source_ack
 
@@ -357,7 +358,7 @@ module io (output reg fetch, output reg IO_ack, inout wire [7:0] data, input [6:
                 if (valid_sync2 && WRITE_en_sync2)
                 begin
                     
-                    regfile_write_data = data_in;
+                    regfile_write_data = DMA_data_in;
                     regfile_address = target_address;
                     write = 1;
                     IO_ack = 1; // must become source_ack
@@ -366,7 +367,7 @@ module io (output reg fetch, output reg IO_ack, inout wire [7:0] data, input [6:
 
             end
 
-            default     :  data = 0;
+            default     :  DMA_data_out = 0;
 
         endcase
 
