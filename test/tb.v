@@ -6,15 +6,10 @@
 */
 module tb ();
 
-  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
-  initial begin
-    $dumpfile("tb.fst");
-    $dumpvars(0, tb);
-    #1;
-  end
-
   // Wire up the inputs and outputs:
-  reg clk;
+  reg clk;        // DMAC/CPU clock
+  reg mem_clk;    // Memory clock
+  reg io_clk;     // I/O Device clock
   reg rst_n;
   reg ena;
   reg [7:0] ui_in;
@@ -22,13 +17,20 @@ module tb ();
   wire [7:0] uo_out;
   wire [7:0] uio_out;
   wire [7:0] uio_oe;
+  wire _keep_clocks = clk ^ mem_clk ^ io_clk; // so the simulator doesn't optimize away the unused clocks
 `ifdef GL_TEST
   wire VPWR = 1'b1;
   wire VGND = 1'b0;
 `endif
 
+  initial begin
+    clk = 1'b0;
+    mem_clk = 1'b0;
+    io_clk = 1'b0;
+  end
+
   // Replace tt_um_example with your module name:
-  tt_um_example user_project (
+  tt_um_auth_dmac dut (
 
       // Include power ports for the Gate Level test:
 `ifdef GL_TEST
@@ -45,5 +47,6 @@ module tb ();
       .clk    (clk),      // clock
       .rst_n  (rst_n)     // not reset
   );
+
 
 endmodule
