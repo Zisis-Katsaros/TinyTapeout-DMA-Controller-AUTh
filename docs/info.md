@@ -100,7 +100,7 @@ Install Icarus Verilog first.
 Windows (PowerShell, winget):
 
 ```powershell
-winget install IcarusVerilog.IcarusVerilog
+winget install Icarus.Verilog
 ```
 
 Linux (Debian/Ubuntu):
