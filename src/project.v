@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2024 Kyriakos Kokkinos
+ * Copyright (c) 2026 Zisis Katsaros
  * SPDX-License-Identifier: Apache-2.0
  */
 
 `default_nettype none
 
-module tt_um_AUTH_DMA_CONTROLLER (
+module tt_um_auth_dmac (
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
     input  wire [7:0] uio_in,   // IOs: Input path
@@ -15,190 +15,299 @@ module tt_um_AUTH_DMA_CONTROLLER (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
-  
-  
-  	reg BR;
+
+    // Inputs
+    wire       start;
+    wire       BG;
+    wire       rtrn;
+    wire [4:0] cfg_in;
+
+    // Internal output controls
+    reg BR;
     reg WRITE_en;
     reg done;
-    reg REQ ; 
-    reg ALE;
-    reg Write_dir;	//0 for MEMORY -> IO write 1 for IO -> MEMORY write 
-	reg io_dir; //Direction of Bidirectional BUS
-  
-    localparam IDLE = 3'b000;
-    localparam CONFIGURATION = 3'b001;
-  	localparam HANDSHAKE = 3'b010;	
-    localparam DMA2SRC = 3'b011;	//Stelno stin mnimi ti thelo na paro
-  	localparam SRC2DMA = 3'b100;
-    localparam DMA2DEST_addr = 3'b101;
-	localparam DMA2DEST_data = 3'b110;	 	
-  
-    reg [2:0] current_state, next_state;
-    reg [2:0] counter;
-    reg MODE ; //0 for single word transfer and 1 for burst mode
-    reg [2:0] words_left;
-    reg [7:0] src_addr;
-    reg [7:0] dest_addr;
-    reg [7:0] data;
+    reg valid;
+    reg ack;
+    reg target; // 0: mem, 1: io
+    reg transfer_drive;
     reg [7:0] transfer_bus_out;
 
-    //2-FF synchronizer in local clk domain
-    reg ACK_sync_ff1, ACK_sync_ff2;
-  
-    //INPUTS
-    wire BG;
-//     wire Enable;
-    wire ACK_async;
-  	wire [3:0] cfg_in;
+    // Config and data registers
+    reg mode;           // 0: single word, 1: 4-word burst
+    reg direction;      // 0: mem -> io, 1: io -> mem
+    reg [7:0] src_addr;
+    reg [7:0] dst_addr;
+    reg [7:0] data_buffer;
 
-//   assign Enable = ui_in[7];
-  assign BG = ui_in[6];
-  assign ACK_async = ui_in[5];
-  assign cfg_in = ui_in[3:0];
+    // Counters
+    reg [1:0] prep_cntr;
+    reg [1:0] src_send_cntr;
+    reg dst_addr_cntr;
+    reg dst_data_cntr;
+    reg [1:0] words_left;
 
-  wire ACK_sync = ACK_sync_ff2 ;
+    // FSM state
+    reg [2:0] current_state;
+    reg [2:0] next_state;
 
-    always @(posedge clk or negedge rst_n) begin
+    localparam [2:0] IDLE       = 3'b000;
+    localparam [2:0] PREPARATION = 3'b001;
+    localparam [2:0] WAIT4BG    = 3'b010;
+    localparam [2:0] SRC_SEND   = 3'b011;
+    localparam [2:0] RECEIVE    = 3'b100;
+    localparam [2:0] SENDaddr   = 3'b101;
+    localparam [2:0] SENDdata   = 3'b110;
+
+    // 2FF synchronizers for CDC 
+    reg rtrn_ff1, rtrn_ff2, rtrn_ff2_d;
+    wire rtrn_sync;
+    wire rtrn_rise;
+
+    // Input Mapping
+    assign start = ui_in[7];
+    assign BG = ui_in[6];
+    assign rtrn = ui_in[5];
+    assign cfg_in = ui_in[4:0];
+
+    // Output Mapping
+    assign uo_out[7] = BR;
+    assign uo_out[6] = WRITE_en;
+    assign uo_out[5] = done;
+    assign uo_out[4] = valid;
+    assign uo_out[3] = ack;
+    assign uo_out[2] = target;
+    assign uo_out[1:0] = 2'b00;
+
+    // BIDIR Mapping
+    assign uio_out = transfer_bus_out;
+    assign uio_oe = {8{transfer_drive}};
+
+    // rtrn synchronizer and pulse generator
+    assign rtrn_sync = rtrn_ff2;
+    assign rtrn_rise = rtrn_sync & ~rtrn_ff2_d;
+    // assign rtrn_rise = rtrn_ff1 & ~rtrn_ff2; 
+
+    
+    always @(posedge clk or negedge rst_n) begin: SEQUENTIAL_LOGIC
         if (!rst_n) begin
+            // reset sync FFs
+            rtrn_ff1 <= 1'b0;
+            rtrn_ff2 <= 1'b0;
+            rtrn_ff2_d <= 1'b0;
+
+            // reset counters
+            prep_cntr <= 2'b00;
+            src_send_cntr <= 2'b0;
+            dst_addr_cntr <= 1'b0;
+            dst_data_cntr <= 1'b0;
+
+            // reset internal regs
+            mode <= 1'b0;
+            direction <= 1'b0;
+            src_addr <= 8'h00;
+            dst_addr <= 8'h00;
+            data_buffer <= 8'h00;
+            words_left <= 2'b00;
+            done <= 1'b0;
+            ack <= 1'b0;
+
+            // reset FSM state
             current_state <= IDLE;
-            counter <= 3'b000;
-          	src_addr <= 8'b00000000;
-          	dest_addr <= 8'b00000000;
-          	data <= 8'b00000000;
-          	transfer_bus_out <= 8'b00000000;
-            ACK_sync_ff1 <= 1'b0;
-            ACK_sync_ff2 <= 1'b0;
         end 
         else begin
+            // Update sync FFs
+            rtrn_ff1 <= rtrn;
+            rtrn_ff2 <= rtrn_ff1;
+            rtrn_ff2_d <= rtrn_ff2;
+
+            // Update FSM state
             current_state <= next_state;
-            ACK_sync_ff1 <= ACK_async;
-            ACK_sync_ff2 <= ACK_sync_ff1;
 
-          if (next_state != current_state || current_state==IDLE) begin
-                counter <= 3'b000;
-            end 
-            else begin
-                counter <= counter + 3'b001;
-            end
+            // Pulse ack when the DMAC samples a return signal
+            ack <= rtrn_rise;
 
-          	//To ypoloipo sequential Logic
-          case(current_state) 
-            IDLE: begin
-              if (ui_in[7]) begin //If enable
-                src_addr[3:0] <= cfg_in;
-                MODE <= ui_in[4];
-            	end
-              end 
-              
-             CONFIGURATION: begin
-               if (counter == 0) begin
-                 Write_dir <= ui_in[7];
-                 src_addr[7:4] <= cfg_in;
-               end
-               
-               if (counter == 1) begin
-                 dest_addr[3:0] <= cfg_in;
-               end
-               
-               if (counter == 2) begin
-                 dest_addr[7:4] <= cfg_in;
-               end
-             end
-            
-            SRC2DMA: begin
-               if (ACK_sync)
-                 data <= uio_in;	//If ACK_sync get the data from the source 
-            end
-              
+            // State-specific sequential logic
+            case (current_state)
+                IDLE: begin
+                    // reset counters
+                    prep_cntr <= 2'b00; 
+                    src_send_cntr <= 2'b0;
+                    dst_addr_cntr <= 1'b0;
+                    dst_data_cntr <= 1'b0;
+                end
+                PREPARATION: begin
+                    case (prep_cntr) // preparation sequence
+                        2'b00: begin
+                            src_addr[3:0] <= cfg_in[3:0];
+                            mode <= cfg_in[4];
+                        end
+                        2'b01: begin
+                            src_addr[7:4] <= cfg_in[3:0];
+                            direction <= cfg_in[4];
+                        end
+                        2'b10: begin
+                            dst_addr[3:0] <= cfg_in[3:0];
+                        end
+                        2'b11: begin
+                            dst_addr[7:4] <= cfg_in[3:0];
+                            words_left <= mode ? 2'b11 : 2'b00;
+                        end
+                        default: begin
+                        end
+                    endcase
 
+                    // update prep counter
+                    if (prep_cntr != 2'b11) prep_cntr <= prep_cntr + 2'b01;
+                end
+                WAIT4BG: begin
+                    src_send_cntr <= 2'b0;
+                    dst_addr_cntr <= 1'b0;
+                    dst_data_cntr <= 1'b0;
+                end
+                SRC_SEND: begin
+                    dst_addr_cntr <= 1'b0;
+                    dst_data_cntr <= 1'b0;
+
+                    // update src_addr send counter
+                    if (src_send_cntr != 2'b10) src_send_cntr <= src_send_cntr + 1'b1;
+                end
+                RECEIVE: begin
+                    src_send_cntr <= 2'b0;
+                    dst_addr_cntr <= 1'b0;
+                    dst_data_cntr <= 1'b0;
+
+                    // capture data from transfer_bus
+                    if (rtrn_rise) data_buffer <= uio_in; 
+                end
+                SENDaddr: begin
+                    src_send_cntr <= 2'b0;
+                    dst_data_cntr <= 1'b0;
+
+                    // update dest_addr send counter
+                    if (dst_addr_cntr == 1'b0) dst_addr_cntr <= 1'b1;
+                    else if (rtrn_rise) dst_addr_cntr <= 1'b0;
+                end
+                SENDdata: begin
+                    src_send_cntr <= 2'b0;
+                    dst_addr_cntr <= 1'b0;
+
+                    // update dest_data send counter
+                    if (dst_data_cntr == 1'b0) dst_data_cntr <= 1'b1;
+                    else if (rtrn_rise) begin
+                        dst_data_cntr <= 1'b0;
+                        if (words_left == 2'b0) done <= 1'b1; // send done if no more words left
+                        else begin
+                            words_left <= words_left - 2'b01; // decrement words left, increment addresses
+                            src_addr <= src_addr + 8'h01;
+                            dst_addr <= dst_addr + 8'h01;
+                        end
+                    end
+                end
+                default: begin
+                    src_send_cntr <= 2'b0;
+                    dst_addr_cntr <= 1'b0;
+                    dst_data_cntr <= 1'b0;
+                end
             endcase
-          
         end
     end
 
-    always @* begin: NEXT_STATE_LOGIC
+    always @(*) begin: NEXT_STATE_LOGIC
         next_state = current_state;
 
         case (current_state)
             IDLE: begin
-                if (ui_in[7]) begin //If enable
-                    next_state = CONFIGURATION;
+              if (start) next_state = PREPARATION;
+            end
+            PREPARATION: begin
+                if (prep_cntr == 2'b11) next_state = WAIT4BG;
+            end
+            WAIT4BG: begin
+                if (BG) next_state = SRC_SEND;
+            end
+            SRC_SEND: begin
+                if(src_send_cntr == 2'b10) next_state = RECEIVE;
+            end
+            RECEIVE: begin
+                if (rtrn_rise) next_state = SENDaddr;
+            end
+            SENDaddr: begin
+                if ((dst_addr_cntr == 1'b1) && rtrn_rise) begin
+                    next_state = SENDdata;
                 end
             end
-
-            CONFIGURATION: begin
-              if (counter == 2)
-                next_state = HANDSHAKE;
+            SENDdata: begin
+                if ((dst_data_cntr == 1'b1) && rtrn_rise) begin
+                    if (words_left == 2'b00) next_state = IDLE; // move to idle if no more words left
+                    else next_state = SRC_SEND; // else go back to src_send
+                end
             end
-          
-            HANDSHAKE: begin
-                if (BG)
-                  next_state = DMA2SRC;
-              end
-
-            DMA2SRC: begin
-              if (ACK_sync)
-                next_state = SRC2DMA;
-            end
-
-            SRC2DMA: begin
-               if (ACK_sync)
-                 next_state = DMA2DEST_addr;
-            end
-          
-          	DMA2DEST_addr: begin
-              if (ACK_sync)
-                next_state = DMA2DEST_data;
-            end
-
             default: begin
                 next_state = IDLE;
             end
         endcase
     end
+  
+    always @(*) begin: OUTPUT_LOGIC
+        BR = 1'b0;
+        WRITE_en = 1'b0;
+        valid = 1'b0;
+        target = 1'b0;
+        transfer_drive = 1'b0;
+        transfer_bus_out = 8'h00;
 
-    always @* begin: OUTPUT_LOGIC
         case (current_state)
+            IDLE: begin
+            end
+            PREPARATION: begin
+            end
+            WAIT4BG: begin
+                BR = 1'b1; // send BR to CPU
+            end
+            SRC_SEND: begin
+                BR = 1'b1;
+                WRITE_en = 1'b0;
+                // direction=0: send to mem, direction=1: send to io
+                target = direction;
+                transfer_drive = 1'b1; // set bidir to output
+                transfer_bus_out = src_addr;
 
-            HANDSHAKE: begin
-                BR = 1;    
+                // after one cycle send valid
+                if(src_send_cntr != 2'b0) valid = 1'b1; 
             end
-          
-          	DMA2SRC: begin
-              	BR = 0; 
-                WRITE_en = 0;
-              	REQ = 1 ;
-              	io_dir = 1 ;
-              	transfer_bus_out = src_addr;
+            RECEIVE: begin
+                BR = 1'b1;
+                WRITE_en = 1'b0;
+                transfer_drive = 1'b0; // set bidir to input
             end
-          
-          SRC2DMA: begin
-              	io_dir = 0;
-            	REQ = 0;
-            if (ACK_sync)
-              REQ = 1;	//When synchronising happens send back ACK towards SRC
+            SENDaddr: begin
+                BR = 1'b1;
+                WRITE_en = 1'b1;
+                // direction=0: send to io, direction=1: send to mem
+                target = ~direction;
+                transfer_drive = 1'b1; // set bidir to output
+                transfer_bus_out = dst_addr;
+
+                // after one cycle send valid
+                if (dst_addr_cntr == 1'b1) valid = 1'b1;
             end
-          
-          DMA2DEST_addr: begin
-            io_dir = 1;
-            WRITE_en = 1;
-            transfer_bus_out = dest_addr;
-            REQ = 1;	
-          end
-          
-          DMA2DEST_data: begin
-            io_dir=1;
-            transfer_bus_out = data;
-            REQ = 1; 
-          end
-          
+            SENDdata: begin
+                BR = 1'b1;
+                WRITE_en = 1'b1; 
+                // direction=0: send to io, direction=1: send to mem
+                target = ~direction;
+                transfer_drive = 1'b1; // set bidir to output
+                transfer_bus_out = data_buffer;
+
+                // after one cycle send valid
+                if (dst_data_cntr == 1'b1) valid = 1'b1;
+            end
+            default: begin
+            end
         endcase
     end
 
-          assign uo_out = {2'b00, Write_dir, ALE, REQ , done, WRITE_en, BR};
-    assign uio_out = transfer_bus_out;
-    assign uio_oe = io_dir ? 8'hFF : 8'h00;
-
-    wire _unused = &{ena, 1'b0};
+    // Prevent unused warning for currently unconsumed mode bits.
+    wire _unused_ok = &{ena, direction, 1'b0};
 
 endmodule
