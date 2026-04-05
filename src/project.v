@@ -228,10 +228,13 @@ module tt_um_example_zafeiris (
 
   // Output assignments
 
+  wire bus_dir;
+  assign bus_dir = direction;
+
   assign uo_out[0] = valid;
   assign uo_out[1] = WRITE_en;
   assign uo_out[2] = done;
-  assign uo_out[3] = direction; // bus_dir
+  assign uo_out[3] = bus_dir; // bus_dir, same with direction
   assign uo_out[4] = ack;
   assign uo_out[5] = mode;
   assign uo_out[6] = BR;
@@ -462,11 +465,14 @@ module tt_um_example_zafeiris (
         transfer_bus = source_addr;
         valid = 1'd1;
         WRITE_en = 1'd0;
+        BR = 1'b1;
 
       end
 
       SRC_to_DMA            :
       begin
+
+        BR = 1'b1;
 
         if (fetch_sync2)
         begin
@@ -486,12 +492,13 @@ module tt_um_example_zafeiris (
         transfer_bus = dest_addr;
         valid = 1'd1;
         WRITE_en = 1'd1;
+        BR = 1'b1;
 
       end
 
-      DELAY                : valid = 0; // Sending for a bit more time that valid went low to indicate that the acknowledgment was successsfull
+      DELAY                : begin valid = 0; BR = 1'b1; end // Sending for a bit more time that valid went low to indicate that the acknowledgment was successsfull
 
-      ACKNOWLEDGMENT       : ack = 1; // This state ensures that we will inform that we got the data
+      ACKNOWLEDGMENT       : begin ack = 1; BR = 1'b1; end // This state ensures that we will inform that we got the data
 
       DMA_to_DEST_data     :
       begin
@@ -499,6 +506,7 @@ module tt_um_example_zafeiris (
         transfer_bus = source_data;
         valid = 1'd1;
         WRITE_en = 1'd1;
+        BR = 1'b1;
 
       end
 
