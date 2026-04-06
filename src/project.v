@@ -17,9 +17,9 @@ module tt_um_auth_dmac (
 );
 
     // Timeout limit
-    localparam TIMEOUT_LIMIT = 50; // If no rtrn_rise pulse is detected within the TIMEOUT_LIMIT in states: RECEIVE, SENDaddr, SENDdata
+    localparam timeout_limit = 12; // If no rtrn_rise pulse is detected within the timeout_limit in states: RECEIVE, SENDaddr, SENDdata
                                             // then timeout and return to IDLE state with BR and done low
-    localparam timeout_cntr_width = $clog2(TIMEOUT_LIMIT+1);
+    localparam timeout_cntr_width = $clog2(timeout_limit+1);
 
     // Inputs
     wire       start;
@@ -87,7 +87,7 @@ module tt_um_auth_dmac (
 
     // timeout logic
     assign wait_for_rtrn = (current_state == RECEIVE) || (current_state == SENDaddr) || (current_state == SENDdata);
-    assign timeout = wait_for_rtrn && !rtrn_rise && (timeout_cntr == TIMEOUT_LIMIT-1);
+    assign timeout = wait_for_rtrn && !rtrn_rise && (timeout_cntr == timeout_limit-1);
 
     // FSM 
     reg [2:0] current_state;
@@ -194,7 +194,7 @@ module tt_um_auth_dmac (
                     dst_data_cntr <= 1'b0;
 
                     if (rtrn_rise) timeout_cntr <= {timeout_cntr_width{1'b0}};
-                    else if (timeout_cntr != TIMEOUT_LIMIT) timeout_cntr <= timeout_cntr + 1;
+                    else if (timeout_cntr != timeout_limit) timeout_cntr <= timeout_cntr + 1;
 
                     // capture data from transfer_bus
                     if (rtrn_rise) data_buffer <= uio_in; 
@@ -203,8 +203,8 @@ module tt_um_auth_dmac (
                     src_send_cntr <= 2'b0;
                     dst_data_cntr <= 1'b0;
 
-                    if (rtrn_rise) timeout_cntr <= 4'd0;
-                    else if (timeout_cntr != TIMEOUT_LIMIT) timeout_cntr <= timeout_cntr + 1;
+                    if (rtrn_rise) timeout_cntr <= {timeout_cntr_width{1'b0}};
+                    else if (timeout_cntr != timeout_limit) timeout_cntr <= timeout_cntr + 1;
 
                     // update dest_addr send counter
                     if (dst_addr_cntr == 1'b0) dst_addr_cntr <= 1'b1;
@@ -214,8 +214,8 @@ module tt_um_auth_dmac (
                     src_send_cntr <= 2'b0;
                     dst_addr_cntr <= 1'b0;
 
-                    if (rtrn_rise) timeout_cntr <= 4'd0;
-                    else if (timeout_cntr != TIMEOUT_LIMIT) timeout_cntr <= timeout_cntr + 1;
+                    if (rtrn_rise) timeout_cntr <= {timeout_cntr_width{1'b0}};
+                    else if (timeout_cntr != timeout_limit) timeout_cntr <= timeout_cntr + 1;
 
                     // update dest_data send counter
                     if (dst_data_cntr == 1'b0) dst_data_cntr <= 1'b1;
@@ -233,7 +233,7 @@ module tt_um_auth_dmac (
                     src_send_cntr <= 2'b0;
                     dst_addr_cntr <= 1'b0;
                     dst_data_cntr <= 1'b0;
-                    timeout_cntr <= 4'd0;
+                    timeout_cntr <= {timeout_cntr_width{1'b0}};
                 end
             endcase
         end
