@@ -73,163 +73,114 @@ Notes:
 - In the state diagram above, `rtrn_rise` is an internal pulse generated shortly after `rtrn` rises to high.
 - `wrds_lft` is not an actual signal; it indicates whether there are still words left to transfer in four-word burst mode.
 
-## How to test
+How to Run & Test 
+This project uses a cocotb-based Python testbench and runs simulation with Icarus Verilog. The entry point for this flow is test/run_cocotb.py.
 
-This project uses a cocotb-based Python testbench and runs simulation with Icarus Verilog.
-The entry point for this flow is `test/run_cocotb.py`.
-
-### 1. Requirements
-
+1. Requirements
 You need all of the following:
 
-- Python 3.10+ (tested in this repo with Python 3.13)
-- `pip` (Python package installer)
-- Icarus Verilog (`iverilog` and `vvp` available in PATH)
-- The Python packages in `test/requirements.txt`:
-	- `pytest==8.4.2`
-	- `cocotb==2.0.1`
+Python 3.10+ (Tested up to Python 3.14).
 
-Optional:
+pip (Python package installer).
 
-- GTKWave for waveform viewing (`.fst` files)
+Icarus Verilog (iverilog and vvp available in PATH).
 
-### 2. Install system dependencies
+The Python packages in test/requirements.txt.
 
+Optional but Recommended:
+
+Surfer (Modern waveform viewer for macOS/Linux/Windows).
+
+GTKWave (Classic waveform viewing).
+
+2. Install System Dependencies
 Install Icarus Verilog first.
 
-Windows (PowerShell, winget):
+macOS (Homebrew): brew install icarus-verilog
 
-```powershell
-winget install IcarusVerilog.IcarusVerilog
-```
+Windows (winget): winget install IcarusVerilog.IcarusVerilog
 
-Linux (Debian/Ubuntu):
+Linux (Ubuntu): sudo apt update && sudo apt install -y iverilog
 
-```bash
-sudo apt update
-sudo apt install -y iverilog
-```
+Waveform Viewers:
 
-macOS (Homebrew):
+Surfer (macOS): Download the .dmg from the official Surfer GitHub.
 
-```bash
-brew install icarus-verilog
-```
+Note: On macOS, if it blocks opening, right-click the app and select Open.
 
-Optional GTKWave:
+GTKWave: brew install --cask gtkwave (macOS).
 
-- Windows: `winget install gtkwave.gtkwave`
-- Linux: `sudo apt install -y gtkwave`
-- macOS: `brew install --cask gtkwave`
-
-### 3. Create and activate a Python virtual environment
+3. Create and Activate a Python Virtual Environment
+Crucial for macOS users to avoid "externally-managed-environment" errors.
 
 From repository root:
 
-Windows (PowerShell):
+macOS/Linux:
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-
-Linux/macOS:
-
-```bash
+Bash
 python3 -m venv .venv
 source .venv/bin/activate
-```
+Windows (PowerShell):
 
-If PowerShell blocks activation scripts, allow local scripts in your current user scope:
+PowerShell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+4. Install Python Test Dependencies
+With .venv activated:
 
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### 4. Install Python test dependencies
-
-From repository root with venv activated:
-
-```bash
+Bash
 python -m pip install --upgrade pip
 python -m pip install -r test/requirements.txt
-```
+Special Case: Python 3.14+ (macOS Compatibility)
 
-If you see an import error for `cocotb_tools`, install it explicitly:
+If you are using Python 3.14 or newer, cocotb might block installation due to version checks. Use this workaround:
 
-```bash
-python -m pip install cocotb-tools
-```
-
-### 5. Verify tools are available
-
-```bash
+Bash
+export COCOTB_IGNORE_PYTHON_REQUIRES=1
+pip install cocotb cocotb-bus pytest
+5. Verify Tools
+Bash
 iverilog -V
-vvp -V
 python -c "import cocotb; print(cocotb.__version__)"
-```
-
-Expected:
-
-- Icarus version information prints
-- cocotb version prints (should be `2.0.1`)
-
-### 6. Run the cocotb flow (run_cocotb.py)
-
+6. Run the Cocotb Flow
 From repository root:
 
-```bash
-python test/run_cocotb.py
-```
+Bash
+python3 test/run_cocotb.py
+Note for macOS: If run_cocotb.py fails with ModuleNotFoundError: No module named 'cocotb_tools', ensure your script uses from cocotb.runner import get_runner (updated syntax).
 
-What this script does:
+7. Expected Results
+You should see: TESTS=4 PASS=4 FAIL=0 SKIP=0.
+The suite validates:
 
-1. Builds the testbench with Icarus using:
-	 - DUT: `src/project.v`
-	 - testbench wrapper: `test/tb.v`
-2. Runs cocotb tests from `test/test.py`.
-3. Generates simulation artifacts under `test/sim_build/rtl/`.
-4. Auto-generates `cocotb_iverilog_dump.v` inside `test/sim_build/rtl/` as part of cocotb/iverilog waveform setup.
+test_single_word_mode
 
-### 7. Expected passing result
+test_burst4_mode
 
-You should see a cocotb summary similar to:
+test_randomized_clock_and_transfer_stress (Validates 2-FF Synchronizers).
 
-- `TESTS=4 PASS=4 FAIL=0 SKIP=0`
+test_all_speed_profile_combinations (Validates Async Handshaking).
 
-The current suite runs these tests:
+8. Waveform Viewing (The "Visual" Test)
+After a successful run, a waveform file is generated at test/sim_build/rtl/tb.fst (or .vcd).
 
-- `test_single_word_mode`
-- `test_burst4_mode`
-- `test_randomized_clock_and_transfer_stress`
-- `test_all_speed_profile_combinations`
+Using Surfer (Recommended):
 
-### 8. Output files to know
+Open Surfer.
 
-Important outputs after a run:
+Drag and drop test/sim_build/rtl/tb.fst into the window.
 
-- Build artifacts: `test/sim_build/rtl/`
-- Main waveform: `test/sim_build/rtl/tb.fst`
-- Auto-generated dump helper: `test/sim_build/rtl/cocotb_iverilog_dump.v`
-- cocotb XML report: `test/results.xml`
+Observe the rtrn_rise and state transitions to verify the DMA logic.
 
-### 9. Optional waveform viewing
+9. Troubleshooting (Common Issues)
+Error: externally-managed-environment: You are not using a Virtual Environment. See Step 3.
 
-If GTKWave is installed:
+Error: cocotb 2.0.1 only supports up to Python 3.13: See Step 4 for the COCOTB_IGNORE_PYTHON_REQUIRES=1 fix.
 
-```bash
-gtkwave test/sim_build/rtl/tb.fst test/tb.gtkw
-```
+ModuleNotFoundError: cocotb_tools:
 
-Otherwise you can use [Surfer](https://surfer-project.org/), an online waveform viewer. Surfer can also be installed as a VS Code extension. You can load a saved state via `\test\63e5afbb-47ec-4432-828d-6531b01ec335` file, which includes all important signals. 
+Install explicitly: pip install cocotb-tools
 
-### 10. Troubleshooting
+OR update run_cocotb.py to import from cocotb.runner.
 
-- `iverilog` not found:
-	- Install Icarus Verilog and reopen terminal so PATH refreshes.
-- `ModuleNotFoundError: cocotb`:
-	- Activate `.venv` and reinstall `-r test/requirements.txt`.
-- `ModuleNotFoundError: cocotb_tools`:
-	- Run `python -m pip install cocotb-tools`.
-- Tests time out or fail unexpectedly:
-	- Ensure you are running the repository's intended branch and rerun with a clean `test/sim_build` directory.
+Zsh parse error: Ensure you are not pasting multi-line comments directly into the terminal without proper escaping.
