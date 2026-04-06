@@ -205,6 +205,18 @@ module tt_um_example_zafeiris (
 
   end
 
+  always @(posedge clk, negedge rst_n)
+  begin
+    
+    if (!rst_n)
+      data_is_sent <= 0;
+    else if (current_state == DMA_to_SRC)
+      data_is_sent <= 0;
+    else if (current_state == DMA_to_DEST_data)
+      data_is_sent <= 1;
+
+  end
+
   // Input registers 
 
   reg mode; // 0 single - 1 burst
@@ -262,6 +274,23 @@ module tt_um_example_zafeiris (
   localparam DONE = 4'b111;
   localparam ACKNOWLEDGMENT = 4'b1000;
 
+  reg data_is_sent;
+
+  // words_left
+
+  reg [2:0] words_left;
+  
+  always @(posedge clk, negedge rst_n)
+  begin
+
+    if (!rst_n)
+      words_left = 1;
+    else
+      words_left = (mode) ? 4 : 1;
+
+  end
+  
+
   // Bidirectional bus
 
   assign uio_oe = ((current_state == DMA_to_SRC) || (current_state == DMA_to_DEST_data) || (current_state == DMA_to_DEST_addr)) ? 8'b1111_1111 : 8'b0000_0000; 
@@ -293,9 +322,10 @@ module tt_um_example_zafeiris (
 
       DMA_to_DEST_addr: if (DEST_ack_sync2) next_state = DELAY; else next_state = DMA_to_DEST_addr;
 
-      DELAY           : if (!DEST_ack_sync2) next_state = DMA_to_DEST_data; else next_state = DELAY;  // Before: cnt == 100
+      DELAY           : if (!DEST_ack_sync2 && words_left == 3'd0) next_state = DONE; else if (!DEST_ack_sync2 && (words_left == 3 || words_left == 2 || words_left == 1) && data_is_sent) next_state = DMA_to_SRC; 
+                        else if (!DEST_ack_sync2 && !data_is_sent) next_state = DMA_to_DEST_data; else next_state = DELAY;  // Before: cnt == 100
 
-      DMA_to_DEST_data: if (DEST_ack_sync2) next_state = DONE; else next_state = DMA_to_DEST_data;
+      DMA_to_DEST_data: if (DEST_ack_sync2) next_state = DELAY; else next_state = DMA_to_DEST_data;
       
       ACKNOWLEDGMENT  : if (!fetch_sync2) next_state = DMA_to_DEST_addr; else next_state = ACKNOWLEDGMENT; 
 
@@ -309,7 +339,7 @@ module tt_um_example_zafeiris (
 
   end
 
-  always @(current_state or BG or fetch_sync2 or cnt)
+  always @(current_state or BG or fetch_sync2 or cnt or words_left or DEST_ack_sync2)
   begin
 
     // Defaults
@@ -463,10 +493,14 @@ module tt_um_example_zafeiris (
       DMA_to_SRC            :
       begin
 
-        transfer_bus = source_addr;
+        if (words_left == 3 || words_left == 2 || words_left == 1)
+          source_addr = source_addr + 1;
+
         valid = 1'd1;
         WRITE_en = 1'd0;
         BR = 1'b1;
+        transfer_bus = source_addr;
+        
 
       end
 
@@ -490,6 +524,9 @@ module tt_um_example_zafeiris (
       DMA_to_DEST_addr      :
       begin
 
+        if (words_left == 3 || words_left == 2 || words_left == 1)
+          dest_addr = dest_addr + 1;
+
         transfer_bus = dest_addr;
         valid = 1'd1;
         WRITE_en = 1'd1;
@@ -497,7 +534,12 @@ module tt_um_example_zafeiris (
 
       end
 
-      DELAY                : begin valid = 0; BR = 1'b1; end // Sending for a bit more time that valid went low to indicate that the acknowledgment was successsfull
+      DELAY                : 
+      begin 
+        valid = 0; 
+        BR = 1'b1; 
+        
+      end // Sending for a bit more time that valid went low to indicate that the acknowledgment was successsfull
 
       ACKNOWLEDGMENT       : begin ack = 1; BR = 1'b1; end // This state ensures that we will inform that we got the data
 
@@ -507,7 +549,10 @@ module tt_um_example_zafeiris (
         transfer_bus = source_data;
         valid = 1'd1;
         WRITE_en = 1'd1;
-        BR = 1'b1;
+        BR = 1'b1; 
+        
+        if (DEST_ack_sync2)
+          words_left = words_left - 1;
 
       end
 

@@ -277,7 +277,7 @@ module memory (output reg fetch, output reg MEM_ack, output reg [7:0] DMA_data_o
 
             DESTINATION2: if (valid_sync2 && WRITE_en_sync2) next_state = DEST2_ACKNOWLEDGMENT; else next_state = DESTINATION2;
 
-            DONE_STATE  : if (mode_sync2) next_state = SOURCE1; else if (done_sync2) next_state = WAITING; else next_state = DONE_STATE;
+            DONE_STATE  : if (mode_sync2 && !direction_sync2) next_state = SOURCE1; else if (mode_sync2 && direction_sync2) next_state = DESTINATION1; else if (!BG_sync2) next_state = WAITING; else next_state = DONE_STATE;
 
             default     : next_state = WAITING;
 
