@@ -2,7 +2,6 @@
  * Copyright (c) 2024 Your Name
  * SPDX-License-Identifier: Apache-2.0
  */
-
 `default_nettype none
 
 module tt_um_example_zafeiris (
@@ -34,7 +33,6 @@ module tt_um_example_zafeiris (
   // --------------     END     -----------------------
 
   // Synchronizers
-
   reg SRC_ack_sync1, SRC_ack_sync2;
 
   always @(posedge clk or negedge rst_n)
@@ -130,7 +128,6 @@ module tt_um_example_zafeiris (
   end
 
   // regfile for direction, BG and mode
-
   integer j;
   reg regs [1:0];
   reg write;
@@ -171,7 +168,6 @@ module tt_um_example_zafeiris (
   end
 
   // regfile for source_data
-
   always @(posedge clk or negedge rst_n)
   begin
 
@@ -209,7 +205,6 @@ module tt_um_example_zafeiris (
   end
 
   // Input registers 
-
   reg mode; // 0 single - 1 burst
   reg direction; // 0 memory --> io, 1 io --> memory
   wire fetch; // fetch/acknowledgement
@@ -221,7 +216,6 @@ module tt_um_example_zafeiris (
   assign fetch = ui_in[5];
 
   // Output registers
-
   reg valid;
   reg done;
   reg WRITE_en;
@@ -230,7 +224,6 @@ module tt_um_example_zafeiris (
   reg ack;
 
   // Output assignments
-
   wire bus_dir;
   assign bus_dir = direction;
 
@@ -245,12 +238,10 @@ module tt_um_example_zafeiris (
 
 
   // Data BUS
-
   reg [7:0] transfer_bus;
   assign uio_out = transfer_bus;
 
   // FSM 
-
   reg [3:0] current_state, next_state;
 
   reg [6:0] cnt;
@@ -268,7 +259,6 @@ module tt_um_example_zafeiris (
   reg data_is_sent;
 
   // words_left
-
   reg [2:0] words_left;
   
   always @(posedge clk, negedge rst_n)
@@ -283,13 +273,11 @@ module tt_um_example_zafeiris (
 
   end
   
-
   // Bidirectional bus
 
   assign uio_oe = ((current_state == DMA_to_SRC) || (current_state == DMA_to_DEST_data) || (current_state == DMA_to_DEST_addr)) ? 8'b1111_1111 : 8'b0000_0000; 
 
   // FSM implementation
-
   always @(posedge clk or negedge rst_n) 
   begin
 
@@ -326,9 +314,7 @@ module tt_um_example_zafeiris (
 
       default         : next_state = IDLE_PREPARATION;
 
-
     endcase
-
 
   end
 
@@ -491,7 +477,6 @@ module tt_um_example_zafeiris (
         BR = 1'b1;
         transfer_bus = source_addr;
         
-
       end
 
       SRC_to_DMA            :
@@ -546,5 +531,4 @@ module tt_um_example_zafeiris (
       
     endcase
   end
-
 endmodule

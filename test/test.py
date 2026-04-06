@@ -139,6 +139,3 @@ async def test_project(dut):
             dut._log.info(f"Transfer {i} FAILED: Source [dec: {address_1 + i}] sent {src_val} != Dest [dec: {address_2 + i}] received {dest_val}")
             assert False, f"Data mismatch at offset {i}!"
     #assert False, f"Simulation timeout: 'done' bit did not become 1 after {max_cycles} clock cycles!"
-
-    # Keep testing the module by changing the input values, waiting for
-    # one or more clock cycles, and asserting the expected output values.
