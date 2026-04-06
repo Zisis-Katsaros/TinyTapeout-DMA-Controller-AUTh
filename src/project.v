@@ -142,12 +142,32 @@ module tt_um_example_zafeiris (
     else
     begin
 
-      source_addr <= {regs_for_addr[3], regs_for_addr[2], regs_for_addr[1], regs_for_addr[0]};
-      dest_addr <= {regs_for_addr[7], regs_for_addr[6], regs_for_addr[5], regs_for_addr[4]};
+      // source_addr = {regs_for_addr[3], regs_for_addr[2], regs_for_addr[1], regs_for_addr[0]};
+      // dest_addr = {regs_for_addr[7], regs_for_addr[6], regs_for_addr[5], regs_for_addr[4]};
+
+      source_addr <= ((words_left == 4 && mode) || (!mode)) ? ({regs_for_addr[3], regs_for_addr[2], regs_for_addr[1], regs_for_addr[0]}) :
+                    (words_left == 3 && mode) ? ({regs_for_addr[3], regs_for_addr[2], regs_for_addr[1], regs_for_addr[0]} + 8'd1) :
+                    (words_left == 2 && mode) ? ({regs_for_addr[3], regs_for_addr[2], regs_for_addr[1], regs_for_addr[0]} + 8'd2) :
+                    (words_left == 1 && mode) ? ({regs_for_addr[3], regs_for_addr[2], regs_for_addr[1], regs_for_addr[0]} + 8'd3) : 8'd0;
+
+      dest_addr <= ((words_left == 4 && mode) || (!mode)) ? ({regs_for_addr[7], regs_for_addr[6], regs_for_addr[5], regs_for_addr[4]}) :
+                    (words_left == 3 && mode) ? ({regs_for_addr[7], regs_for_addr[6], regs_for_addr[5], regs_for_addr[4]} + 8'd1) :
+                    (words_left == 2 && mode) ? ({regs_for_addr[7], regs_for_addr[6], regs_for_addr[5], regs_for_addr[4]} + 8'd2) :
+                    (words_left == 1 && mode) ? ({regs_for_addr[7], regs_for_addr[6], regs_for_addr[5], regs_for_addr[4]} + 8'd3) : 8'd0;
 
     end
 
   end
+
+  // always @(posedge clk or negedge rst_n)
+  // begin
+
+  //   if (current_state == DMA_to_SRC && (words_left == 3 || words_left == 2 || words_left == 1) && mode && DEST_ack_sync2)
+  //     source_addr = source_addr + 1;
+  //   if (current_state == DMA_to_DEST_data && (words_left == 3 || words_left == 2 || words_left == 1) && mode && DEST_ack_sync2)
+  //     dest_addr = dest_addr + 1;
+
+  // end
 
   // regfile for direction, BG and mode
 
@@ -285,8 +305,10 @@ module tt_um_example_zafeiris (
 
     if (!rst_n)
       words_left = 1;
-    else
+    else if (current_state == IDLE_PREPARATION)
       words_left = (mode) ? 4 : 1;
+    else if (current_state == DMA_to_DEST_data && DEST_ack_sync2)
+      words_left = words_left - 3'd1; 
 
   end
   
@@ -339,7 +361,7 @@ module tt_um_example_zafeiris (
 
   end
 
-  always @(current_state or BG or fetch_sync2 or cnt or words_left or DEST_ack_sync2)
+  always @(current_state or BG or fetch_sync2 or cnt)
   begin
 
     // Defaults
@@ -493,8 +515,8 @@ module tt_um_example_zafeiris (
       DMA_to_SRC            :
       begin
 
-        if (words_left == 3 || words_left == 2 || words_left == 1)
-          source_addr = source_addr + 1;
+        // if ((words_left == 3 || words_left == 2 || words_left == 1) && mode)
+        //   source_addr = source_addr + 1;
 
         valid = 1'd1;
         WRITE_en = 1'd0;
@@ -524,8 +546,8 @@ module tt_um_example_zafeiris (
       DMA_to_DEST_addr      :
       begin
 
-        if (words_left == 3 || words_left == 2 || words_left == 1)
-          dest_addr = dest_addr + 1;
+        // if ((words_left == 3 || words_left == 2 || words_left == 1) && mode)
+        //   dest_addr = dest_addr + 1;
 
         transfer_bus = dest_addr;
         valid = 1'd1;
@@ -551,8 +573,6 @@ module tt_um_example_zafeiris (
         WRITE_en = 1'd1;
         BR = 1'b1; 
         
-        if (DEST_ack_sync2)
-          words_left = words_left - 1;
 
       end
 
