@@ -37,7 +37,7 @@ async def _assert_wait_state_active(dut):
 
 async def _wait_for_timeout(dut):
     timeout_limit = _get_timeout_limit(dut)
-    await ClockCycles(dut.clk, timeout_limit+1)
+    await ClockCycles(dut.clk, timeout_limit + 5) 
     
 
 

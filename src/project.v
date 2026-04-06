@@ -17,7 +17,7 @@ module tt_um_auth_dmac (
 );
 
     // Timeout limit
-    localparam TIMEOUT_LIMIT = 12; // If no rtrn_rise pulse is detected within the TIMEOUT_LIMIT in states: RECEIVE, SENDaddr, SENDdata
+    localparam TIMEOUT_LIMIT = 30; // If no rtrn_rise pulse is detected within the TIMEOUT_LIMIT in states: RECEIVE, SENDaddr, SENDdata
                                             // then timeout and return to IDLE state with BR and done low
     localparam timeout_cntr_width = $clog2(TIMEOUT_LIMIT+1);
 
