@@ -173,7 +173,7 @@ module io (output reg fetch, output reg IO_ack, output reg [7:0] DMA_data_out, i
     begin
 
       for (i=0; i<256; i++)
-        regs[i] = 8'b0;     // error for <=
+        regs[i] = 8'd1;     // error for <=
 
     end
     else if (write)

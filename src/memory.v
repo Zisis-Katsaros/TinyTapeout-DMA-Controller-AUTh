@@ -168,7 +168,7 @@ module memory (output reg fetch, output reg MEM_ack, output reg [7:0] DMA_data_o
     begin
 
       for (i=0; i<256; i++)
-        regs[i] = 8'd1;     // error for <=
+        regs[i] = 8'd4;     // error for <=
 
     end
     else if (write)

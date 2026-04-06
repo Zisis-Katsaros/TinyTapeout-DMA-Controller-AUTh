@@ -59,8 +59,8 @@ async def test_project(dut):
     # Configuring the ui_in
 
     # Define two 8-bit addresses to send
-    address_1 = 0x01  # Replace with actual first address
-    address_2 = 0x99  # Replace with actual second address
+    address_1 = 0x01  # Source address (8 bit address, maximum hex value: 0xFF)
+    address_2 = 0x9A  # Destination address (8 bit address, maximum hex value: 0xFF)
     # Combine them into a 16-bit word (addr_2 in upper 8 bits, addr_1 in lower 8 bits)
     full_address = (address_2 << 8) | address_1
 
@@ -78,6 +78,7 @@ async def test_project(dut):
             mode_dir = 0
         elif i == 1:
             mode_dir = 0
+            direction = 0
         else:
             mode_dir = 0
         
@@ -119,6 +120,19 @@ async def test_project(dut):
             assert 1 == 1
             break
         await RisingEdge(dut.clk)
+
+
+    await ClockCycles(dut.clk, 5)
+
+    # Checking if the data we sent was successfuly received
+
+    if direction == 0 and dut.dut_io.regs[address_2].value == dut.dut_mem.regs[address_1].value :
+        dut._log.info(f"The destination address (dec: {address_2}) now holds the data we sent --> data sent: {dut.dut_mem.regs[address_1].value}) --- data received: {dut.dut_io.regs[address_2].value}")
+        assert 1 == 1
+    elif direction == 1 and dut.dut_mem.regs[address_2].value == dut.dut_io.regs[address_1].value :
+        assert 1 == 1
+    else:
+        assert 1 == 0 
             
     #assert False, f"Simulation timeout: 'done' bit did not become 1 after {max_cycles} clock cycles!"
 
