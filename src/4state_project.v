@@ -20,6 +20,17 @@
 //Not to mention an level handshake signal is eaier to track
 //essentially I made what would otheriwse be mutliple states, into one single state with substeps using the counter
 
+// I also extended hat above principal.
+//I took adavntage of the fact that we had unused output pin , so I added an acknowldge signal to the handshaking when we get data from the external source
+// That part is the only one that needed the acknowldge signal since it works only to say to the fetch signal to drop to low since it got the data
+// The acknowledge signal will also need syncing on the other side similar to valid
+// There was another misuse that was made appranet after that correction.
+// That was the fact that fetch was used both as a signal to signify the time window we got the data, and as a signal that signified  that the extrenal surce had captured gotten the data (its own acknowldge)
+// For that reason I changed where it was needed the signal to external_capture
+// That signal obviouly needs syncing whihc I did
+//The combo of the external_capature signal along with the valid signal makes it so we have a complete handshake protocol on the other side as well
+
+
 // I also changedthe way the "enable" siganl works, I added the wait_enable_low
 // Before I kept it as is , and simply thought that there isn't a problem since enable will always be high anyway.
 // However if enable keeps being high after a transfer is done and we go through ecah state, we would then reenter the idle state immidetly if we  hadsoemthing loaded in cfg i
@@ -29,8 +40,7 @@
 
 // This design is stil fednitely weak
 //We take as an assumtipon for example that in the transfer bus, the data will be stable when fetch is high
-//valid alone does not enforce that
-//It only shows the data is ready on the DMAs end , not that it won't chhange while fetch is high
+//valid and extrnal_capture alone do not enforce that
 
 //Also a small thing is thet typically a DMA controller mainly has the option not just i/o -> memory , and memory -> i/o, but mainly memory -> meemory (and i/o/ -> io in some cases but that is typically i/o -> memory -> i/o)
 //I didn't implment this, however it could be doens simply by adding a bit to direction, although that would require some changes in the address assignment as well
@@ -107,15 +117,17 @@ module dma_4_state(
     input wire enable,
 
     // Configuration input (same clock domain as DMA)
-    input wire [3:0] cfg_in, //So I changed config. I instead made i 4 bit. On the first cycle I load the direction and the mode. And then load the 8 bit addresses spliting each address in 2
+    input wire [3:0] cfg_in, //So I changed config. I instead made it 4 bit. On the first cycle I load the direction and the mode. And then load the 8 bit addresses spliting each address in 2
 
     // Cross-domain handshake from external side.
     // IMPORTANT I CHANGED THIS!!!:
     //   - treat this as a LEVEL handshake, not a short pulse.
-    //   - when DMA presents valid data/address, external raises fetch=1
+    //   - when DMA presents valid data/address, external raises external_capture=1 to signify it got it
     //     and keeps it high until DMA drops valid.
-    //   - when external presents read data to DMA, external raises fetch=1
+    //   - when external drives data to DMA, external raises fetch=1
     //     while holding transfer_bus_in stable.
+    //     DMA send ack =1 when it captures it
+    //     When external receives the ack it drop fetch to 0
     input wire fetch,
     input wire external_capture,
     output reg ack,
@@ -182,7 +194,7 @@ module dma_4_state(
     reg external_capture_ff1, external_capture_ff2;
     wire external_capture_sync;
 
-    assign extrenal_capture_sync = external_capture_ff2;
+    assign external_capture_sync = external_capture_ff2;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -246,7 +258,9 @@ module dma_4_state(
 
                 // ====================================================
                 // S0_IDLE
-                // Collect 4 config chunks over 4 cycles while enable=1.
+                // Collect 5 config chunks over 5 cycles while enable=1.
+                // On the first cycle it is just the mode and reg
+                // On the other 4 it is the 8 bit source and destination addresses split up 
                 // Requires enable to go low between commands.
                 // ====================================================
                 S0_IDLE: begin
@@ -264,27 +278,29 @@ module dma_4_state(
                                 done <= 1'b0;   // clear done when new command starts
                                 mode_reg <= cfg_in[3];
                                 direction_reg <= cfg_in[2];
+                                //cfg[1:0] are unused here
+                                cycle_count <= 3'b001;
                             end
 
-                            3'b001: begin;
+                            3'b001: begin
                                 src_addr[7:4] <= cfg_in;
-                                cycle_count <= 2'b01;
+                                cycle_count <= 3'b010;
 
                             end
 
                             3'b010: begin
                                 src_addr[3:0] <= cfg_in;
-                                cycle_count <= 2'b10;
+                                cycle_count <= 3'b011;
                             end
 
                             3'b011: begin
                                 dst_addr[7:4] <= cfg_in;
-                                cycle_count <= 2'b11;
+                                cycle_count <= 3'b100;
                             end
 
                             3'b100: begin
                                 dst_addr[3:0] <= cfg_in;
-                                cycle_count <= 2'b00;
+                                cycle_count <= 3'b000;
                                 state <= S1_PREPARATION;
                                 wait_enable_low <= 1'b1;
 
@@ -358,7 +374,7 @@ module dma_4_state(
                             // while asserting fetch=1.
                             transfer_bus_oe <= 1'b0;
                             valid <= 1'b0;
-                            ack <= 1'b0;
+                            ack <= 1'b0; //This isn't needed here since I put on default as well But I am keeping to show the handshake matters from this stage
                             write_en <= 1'b0;
 
                             if (fetch_sync) begin
@@ -409,7 +425,7 @@ module dma_4_state(
                             valid <= 1'b1;
                             write_en <= 1'b0;
 
-                            if () begin
+                            if (external_capture_sync) begin
                                 substep <= 2'b01;
                             end
                         end
