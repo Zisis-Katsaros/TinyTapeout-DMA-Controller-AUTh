@@ -73,10 +73,10 @@ Notes:
 - In the state diagram above, `rtrn_rise` is an internal pulse generated shortly after `rtrn` rises to high.
 - `wrds_lft` is not an actual signal; it indicates whether there are still words left to transfer in four-word burst mode.
 
-## How to Run & Test 
+# How to Run & Test 
 This project uses a cocotb-based Python testbench and runs simulation with Icarus Verilog. The entry point for this flow is test/run_cocotb.py.
 
-# 1. Requirements
+## 1. Requirements
 You need all of the following:
 
 Python 3.10+ (Tested up to Python 3.14).
@@ -93,7 +93,7 @@ Surfer (Modern waveform viewer for macOS/Linux/Windows).
 
 GTKWave (Classic waveform viewing).
 
-# 2. Install System Dependencies
+## 2. Install System Dependencies
 Install Icarus Verilog first.
 
 macOS (Homebrew): brew install icarus-verilog
@@ -110,7 +110,7 @@ Note: On macOS, if it blocks opening, right-click the app and select Open.
 
 GTKWave: brew install --cask gtkwave (macOS).
 
-# 3. Create and Activate a Python Virtual Environment
+## 3. Create and Activate a Python Virtual Environment
 Crucial for macOS users to avoid "externally-managed-environment" errors.
 
 From repository root:
@@ -142,14 +142,14 @@ pip install cocotb cocotb-bus pytest
 Bash
 iverilog -V
 python -c "import cocotb; print(cocotb.__version__)"
-6. Run the Cocotb Flow
+## 6. Run the Cocotb Flow
 From repository root:
 
 Bash
 python3 test/run_cocotb.py
 Note for macOS: If run_cocotb.py fails with ModuleNotFoundError: No module named 'cocotb_tools', ensure your script uses from cocotb.runner import get_runner (updated syntax).
 
-# 7. Expected Results
+## 7. Expected Results
 You should see: TESTS=4 PASS=4 FAIL=0 SKIP=0.
 The suite validates:
 
@@ -161,7 +161,7 @@ test_randomized_clock_and_transfer_stress (Validates 2-FF Synchronizers).
 
 test_all_speed_profile_combinations (Validates Async Handshaking).
 
-# 8. Waveform Viewing (The "Visual" Test)
+## 8. Waveform Viewing (The "Visual" Test)
 After a successful run, a waveform file is generated at test/sim_build/rtl/tb.fst (or .vcd).
 
 Using Surfer (Recommended):
@@ -172,7 +172,7 @@ Drag and drop test/sim_build/rtl/tb.fst into the window.
 
 Observe the rtrn_rise and state transitions to verify the DMA logic.
 
-# 9. Troubleshooting (Common Issues)
+## 9. Troubleshooting (Common Issues)
 Error: externally-managed-environment: You are not using a Virtual Environment. See Step 3.
 
 Error: cocotb 2.0.1 only supports up to Python 3.13: See Step 4 for the COCOTB_IGNORE_PYTHON_REQUIRES=1 fix.
