@@ -359,7 +359,7 @@ module dma_4_state(
                         end
 
                         2'b01: begin
-                            // Drop valid so external side can release fetch
+                            // Drop valid so external side can release external_capture since it alreay got the data
                             transfer_bus_oe <= 1'b0;
                             valid <= 1'b0;
                             write_en <= 1'b0;
