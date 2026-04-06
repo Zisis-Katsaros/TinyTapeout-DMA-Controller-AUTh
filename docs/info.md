@@ -96,19 +96,19 @@ GTKWave (Classic waveform viewing).
 ## 2. Install System Dependencies
 Install Icarus Verilog first.
 
-macOS (Homebrew): brew install icarus-verilog
+macOS (Homebrew): `brew install icarus-verilog`
 
-Windows (winget): winget install IcarusVerilog.IcarusVerilog
+Windows (winget): `winget install IcarusVerilog.IcarusVerilog`
 
-Linux (Ubuntu): sudo apt update && sudo apt install -y iverilog
+Linux (Ubuntu): `sudo apt update && sudo apt install -y iverilog`
 
 Waveform Viewers:
 
-Surfer (macOS): Download the .dmg from the official Surfer GitHub.
+Surfer (macOS): Download the `.dmg` from the official Surfer GitHub.
 
 Note: On macOS, if it blocks opening, right-click the app and select Open.
 
-GTKWave: brew install --cask gtkwave (macOS).
+GTKWave: `brew install --cask gtkwave (macOS)`.
 
 ## 3. Create and Activate a Python Virtual Environment
 Crucial for macOS users to avoid "externally-managed-environment" errors.
@@ -118,35 +118,36 @@ From repository root:
 macOS/Linux:
 
 Bash
-python3 -m venv .venv
-source .venv/bin/activate
+`python3 -m venv .venv`
+`source .venv/bin/activate`
 Windows (PowerShell):
 
 PowerShell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-4. Install Python Test Dependencies
+`python -m venv .venv`
+`.\.venv\Scripts\Activate.ps1`
+## 4. Install Python Test Dependencies
 With .venv activated:
 
 Bash
-python -m pip install --upgrade pip
+`python -m pip install --upgrade pip
 python -m pip install -r test/requirements.txt
-Special Case: Python 3.14+ (macOS Compatibility)
+Special Case: Python 3.14+ (macOS Compatibility)`
 
 If you are using Python 3.14 or newer, cocotb might block installation due to version checks. Use this workaround:
 
 Bash
-export COCOTB_IGNORE_PYTHON_REQUIRES=1
-pip install cocotb cocotb-bus pytest
-5. Verify Tools
+`export COCOTB_IGNORE_PYTHON_REQUIRES=1
+pip install cocotb cocotb-bus pytest`
+
+## 5. Verify Tools
 Bash
-iverilog -V
-python -c "import cocotb; print(cocotb.__version__)"
+`iverilog -V`
+`python -c "import cocotb; print(cocotb.__version__)"`
 ## 6. Run the Cocotb Flow
 From repository root:
 
 Bash
-python3 test/run_cocotb.py
+`python3 test/run_cocotb.py`
 Note for macOS: If run_cocotb.py fails with ModuleNotFoundError: No module named 'cocotb_tools', ensure your script uses from cocotb.runner import get_runner (updated syntax).
 
 ## 7. Expected Results
