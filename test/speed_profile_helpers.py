@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: © 2026 Zisis Katsaros
+# SPDX-FileCopyrightText: © 2024 Tiny Tapeout
 # SPDX-License-Identifier: Apache-2.0
 
 import cocotb
