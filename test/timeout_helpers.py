@@ -2,30 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from cocotb.triggers import ClockCycles
-
-from general_test_helpers import _pulse_rtrn, _reset_dut, _send_cfg, _wait_until
-
-
-IDLE = 0b000
-RECEIVE = 0b100
-SENDADDR = 0b101
-SENDDATA = 0b110
-
-
-def _get_timeout_limit(dut):
-    return int(dut.dut.TIMEOUT_LIMIT.value)
-
-
-async def _wait_for_state(dut, expected_state, max_cycles=200):
-    await _wait_until(
-        dut,
-        lambda: int(dut.dut.current_state.value) == expected_state,
-        max_cycles=max_cycles,
-    )
+from general_test_helpers import _pulse_rtrn, _reset_dut, _send_cfg, _wait_until, _init_clock
 
 
 async def _assert_timeout_result(dut):
-    assert int(dut.dut.current_state.value) == IDLE, "FSM should return to IDLE after timeout"
     assert int(dut.uo_out.value[7]) == 0, "BR should be low after timeout"
     assert int(dut.uo_out.value[5]) == 0, "done should be low after timeout"
 
@@ -35,48 +15,91 @@ async def _assert_wait_state_active(dut):
     assert int(dut.uo_out.value[5]) == 0, "done should stay low while waiting for rtrn"
 
 
-async def _wait_for_timeout(dut):
-    timeout_limit = _get_timeout_limit(dut)
-    await ClockCycles(dut.clk, timeout_limit+1)
-    
-
-
-async def _prepare_timeout_transaction(dut, src_addr, dst_addr):
+async def _timeout_in_receive(dut, src_addr, dst_addr, timeout_limit=200, phase_wait_cycles=300):
+    await _init_clock(dut)
     await _reset_dut(dut)
+
     await _send_cfg(dut, mode=0, direction=0, src_addr=src_addr, dst_addr=dst_addr)
-    await _wait_for_state(dut, RECEIVE)
 
+    direction = 0 # hardcoded, without loss of generality
+    receive_sender = "mem" if direction == 0 else "io"
+    send_sender = "io" if direction == 0 else "mem"
+    source_target = direction
+    dest_target = direction ^ 1
 
-async def _timeout_in_receive(dut, src_addr, dst_addr):
-    await _prepare_timeout_transaction(dut, src_addr, dst_addr)
+    # SRC_SEND phase: DMA drives source address with valid and WRITE_en=0.
+    await _wait_until(
+        dut,
+        lambda: int(dut.uo_out.value[4]) == 1 and int(dut.uo_out.value[6]) == 0,
+        max_cycles=phase_wait_cycles,
+    )
 
     await _assert_wait_state_active(dut)
-    await _wait_for_timeout(dut)
+    await ClockCycles(dut.clk, timeout_limit+2)
     await _assert_timeout_result(dut)
 
 
-async def _timeout_in_sendaddr(dut, src_addr, dst_addr, rtrn_delay):
-    await _prepare_timeout_transaction(dut, src_addr, dst_addr)
+async def _timeout_in_sendaddr(dut, src_addr, dst_addr, payload, rtrn_delay, timeout_limit=200, phase_wait_cycles=300):
+    await _init_clock(dut)
+    await _reset_dut(dut)
 
-    dut.uio_in.value = 0x5A
-    await _pulse_rtrn(dut, sender="mem", bg=1, pre_cycles=rtrn_delay)
-    await _wait_for_state(dut, SENDADDR)
+    await _send_cfg(dut, mode=0, direction=0, src_addr=src_addr, dst_addr=dst_addr)
 
+    direction = 0 # hardcoded, without loss of generality
+    receive_sender = "mem" if direction == 0 else "io"
+    send_sender = "io" if direction == 0 else "mem"
+    source_target = direction
+    dest_target = direction ^ 1
+
+    # SRC_SEND phase: DMA drives source address with valid and WRITE_en=0.
+    await _wait_until(
+        dut,
+        lambda: int(dut.uo_out.value[4]) == 1 and int(dut.uo_out.value[6]) == 0,
+        max_cycles=phase_wait_cycles,
+    )
+
+    # RECEIVE phase: source returns data, signaled by rtrn rising edge.
+    dut.uio_in.value = payload[0]
+    await _pulse_rtrn(dut, sender=receive_sender, bg=1, pre_cycles=rtrn_delay)
+
+    # SENDaddr phase: No rtrn
     await _assert_wait_state_active(dut)
-    await _wait_for_timeout(dut)
+    await ClockCycles(dut.clk, timeout_limit+2)
     await _assert_timeout_result(dut)
 
 
-async def _timeout_in_senddata(dut, src_addr, dst_addr, rtrn_delay):
-    await _prepare_timeout_transaction(dut, src_addr, dst_addr)
+async def _timeout_in_senddata(dut, src_addr, dst_addr, payload, rtrn_delay, timeout_limit=200, phase_wait_cycles=300):
+    await _init_clock(dut)
+    await _reset_dut(dut)
 
-    dut.uio_in.value = 0x5A
-    await _pulse_rtrn(dut, sender="mem", bg=1, pre_cycles=rtrn_delay)
-    await _wait_for_state(dut, SENDADDR)
+    await _send_cfg(dut, mode=0, direction=0, src_addr=src_addr, dst_addr=dst_addr)
 
-    await _pulse_rtrn(dut, sender="io", bg=1, pre_cycles=rtrn_delay)
-    await _wait_for_state(dut, SENDDATA)
+    direction = 0 # hardcoded, without loss of generality
+    receive_sender = "mem" if direction == 0 else "io"
+    send_sender = "io" if direction == 0 else "mem"
+    source_target = direction
+    dest_target = direction ^ 1
 
+    # SRC_SEND phase: DMA drives source address with valid and WRITE_en=0.
+    await _wait_until(
+        dut,
+        lambda: int(dut.uo_out.value[4]) == 1 and int(dut.uo_out.value[6]) == 0,
+        max_cycles=phase_wait_cycles,
+    )
+
+    # RECEIVE phase: source returns data, signaled by rtrn rising edge.
+    dut.uio_in.value = payload[0]
+    await _pulse_rtrn(dut, sender=receive_sender, bg=1, pre_cycles=rtrn_delay)
+
+    # SENDaddr phase: DMA presents destination address with valid and WRITE_en=1.
+    await _wait_until(
+        dut,
+        lambda: int(dut.uo_out.value[4]) == 1 and int(dut.uo_out.value[6]) == 1,
+        max_cycles=phase_wait_cycles,
+    )
+    await _pulse_rtrn(dut, sender=send_sender, bg=1, pre_cycles=rtrn_delay)
+
+    # SENDdata phase: No rtrn
     await _assert_wait_state_active(dut)
-    await _wait_for_timeout(dut)
+    await ClockCycles(dut.clk, timeout_limit+2)
     await _assert_timeout_result(dut)

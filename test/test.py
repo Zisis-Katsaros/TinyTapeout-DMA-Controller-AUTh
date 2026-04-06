@@ -25,6 +25,8 @@ from timeout_helpers import (
 # For all tests
 rtrn_delay = 3
 
+timeout_limit = 12
+
 # Single Word Mode Test
 @cocotb.test()
 async def test_single_word_mode(dut):
@@ -171,12 +173,13 @@ async def test_all_speed_profile_combinations(dut):
 
 # Timeout test
 @cocotb.test()
-async def test_return_wait_timeouts(dut):
+async def test_return_wait_timeouts(dut, timeout_limit=timeout_limit):
     await _init_clock(dut)
 
     src_addr = 0x34
     dst_addr = 0xA1
+    payload = [0x5C]
 
-    await _timeout_in_receive(dut, src_addr, dst_addr)
-    await _timeout_in_sendaddr(dut, src_addr, dst_addr, rtrn_delay)
-    await _timeout_in_senddata(dut, src_addr, dst_addr, rtrn_delay)
+    await _timeout_in_receive(dut, src_addr, dst_addr, timeout_limit)
+    await _timeout_in_sendaddr(dut, src_addr, dst_addr, payload, rtrn_delay, timeout_limit)
+    await _timeout_in_senddata(dut, src_addr, dst_addr, payload, rtrn_delay, timeout_limit)
