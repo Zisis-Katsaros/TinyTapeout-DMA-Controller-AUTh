@@ -116,6 +116,8 @@ macOS (Homebrew):
 brew install icarus-verilog
 ```
 
+Note for macOS: If unable to open, right-click on the app and select Open.
+
 Optional GTKWave:
 
 - Windows: `winget install gtkwave.gtkwave`
@@ -148,7 +150,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ### 4. Install Python test dependencies
 
-From repository root with venv activated:
+From repository root with .venv activated:
 
 ```bash
 python -m pip install --upgrade pip
@@ -161,6 +163,12 @@ If you see an import error for `cocotb_tools`, install it explicitly:
 python -m pip install cocotb-tools
 ```
 
+Special Case: Python 3.14+ (macOS Compatibility): 
+If you are using Python 3.14 or newer, cocotb might block installation due to version checks. Use this workaround:
+
+```bash
+export COCOTB_IGNORE_PYTHON_REQUIRES=1 pip install cocotb cocotb-bus pytest
+```
 ### 5. Verify tools are available
 
 ```bash
@@ -181,6 +189,8 @@ From repository root:
 ```bash
 python test/run_cocotb.py
 ```
+Note for macOS: 
+If `run_cocotb.py` fails with `ModuleNotFoundError: No module named 'cocotb_tools'`, ensure your script uses `from cocotb.runner import get_runner` (updated syntax).
 
 What this script does:
 
@@ -214,6 +224,7 @@ Important outputs after a run:
 - cocotb XML report: `test/results.xml`
 
 ### 9. Optional waveform viewing
+After a successful run, a waveform file is generated at test/sim_build/rtl/tb.fst (or .vcd).
 
 If GTKWave is installed:
 
@@ -233,3 +244,5 @@ Otherwise you can use [Surfer](https://surfer-project.org/), an online waveform 
 	- Run `python -m pip install cocotb-tools`.
 - Tests time out or fail unexpectedly:
 	- Ensure you are running the repository's intended branch and rerun with a clean `test/sim_build` directory.
+- Zsh parse error: 
+	- Ensure you are not pasting multi-line comments directly into the terminal without proper escaping.
