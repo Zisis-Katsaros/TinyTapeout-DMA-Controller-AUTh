@@ -238,6 +238,7 @@ module tt_um_example_zafeiris (
   assign uo_out[4] = ack;
   assign uo_out[5] = mode;
   assign uo_out[6] = BR;
+  assign uo_out[7] = 0;
 
 
   // Data BUS
@@ -277,16 +278,16 @@ module tt_um_example_zafeiris (
     
   end
 
-  always @(current_state or enable or BG or fetch or cnt)
+  always @(current_state or enable or BG or fetch_sync2 or cnt or SRC_ack_sync2 or DEST_ack_sync2)
   begin
 
     case (current_state)
       
-      IDLE_PREPARATION: if (enable && cnt == 7) next_state = BUS_REQ; else next_state = IDLE_PREPARATION;
+      IDLE_PREPARATION: if (enable && cnt == 8) next_state = BUS_REQ; else next_state = IDLE_PREPARATION;
 
       BUS_REQ         : if (BG) next_state = DMA_to_SRC; else next_state = BUS_REQ;
 
-      DMA_to_SRC      : if (SRC_ack_sync2) next_state = SRC_to_DMA; else next_state = DMA_to_SRC; // ui_in[0] --> after loading data used for synchronized source acknowledgment
+      DMA_to_SRC      : if (SRC_ack_sync2) next_state = SRC_to_DMA; else next_state = DMA_to_SRC;
 
       SRC_to_DMA      : if (fetch_sync2) next_state = ACKNOWLEDGMENT; else next_state = SRC_to_DMA;
 
@@ -296,7 +297,7 @@ module tt_um_example_zafeiris (
 
       DMA_to_DEST_data: if (DEST_ack_sync2) next_state = DONE; else next_state = DMA_to_DEST_data;
       
-      ACKNOWLEDGMENT : if (!fetch_sync2) next_state = DMA_to_DEST_addr; else next_state = ACKNOWLEDGMENT; 
+      ACKNOWLEDGMENT  : if (!fetch_sync2) next_state = DMA_to_DEST_addr; else next_state = ACKNOWLEDGMENT; 
 
       DONE            : next_state = IDLE_PREPARATION;
 
@@ -308,7 +309,7 @@ module tt_um_example_zafeiris (
 
   end
 
-  always @(current_state or enable or BG or fetch_sync2 or cnt)
+  always @(current_state or BG or fetch_sync2 or cnt)
   begin
 
     // Defaults
@@ -336,7 +337,7 @@ module tt_um_example_zafeiris (
         if (enable)
         begin
 
-          if (cnt == 0)
+          if (cnt == 1) // We enter the always because of enable so cnt=0 and cnt=1 write the same first value, so we need 8 cnt's to load 8 values
           begin
 
             // Indicate writing
@@ -353,7 +354,7 @@ module tt_um_example_zafeiris (
           
           end
 
-          else if (cnt == 1)
+          else if (cnt == 2)
           begin
 
             write = 1;
@@ -369,7 +370,7 @@ module tt_um_example_zafeiris (
 
           end
 
-          else if (cnt == 2)
+          else if (cnt == 3)
           begin
 
             write = 1;
@@ -383,7 +384,7 @@ module tt_um_example_zafeiris (
 
           end
 
-          else if (cnt == 3)
+          else if (cnt == 4)
           begin
 
             write = 1;
@@ -397,7 +398,7 @@ module tt_um_example_zafeiris (
 
           end
 
-          else if (cnt == 4)
+          else if (cnt == 5)
           begin
 
             write = 1;
@@ -411,7 +412,7 @@ module tt_um_example_zafeiris (
 
           end
 
-          else if (cnt == 5)
+          else if (cnt == 6)
           begin
 
             write = 1;
@@ -425,7 +426,7 @@ module tt_um_example_zafeiris (
 
           end
 
-          else if (cnt == 6)
+          else if (cnt == 7)
           begin
 
             write = 1;
@@ -439,7 +440,7 @@ module tt_um_example_zafeiris (
 
           end
 
-          else if (cnt == 7)
+          else if (cnt == 8)
           begin
 
             write = 1;

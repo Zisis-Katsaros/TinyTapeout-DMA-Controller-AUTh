@@ -1,6 +1,6 @@
 `default_nettype none
 
-module memory (output reg fetch, output reg MEM_ack, output wire [7:0] DMA_data_out, input wire [7:0] DMA_data_in, input [6:0] ins, input clk, input rst_n);
+module memory (output reg fetch, output reg MEM_ack, output reg [7:0] DMA_data_out, input wire [7:0] DMA_data_in, input [6:0] ins, input clk, input rst_n);
 
     wire BG, done, valid, WRITE_en, mode, direction, DMA_ack;
 
@@ -168,7 +168,7 @@ module memory (output reg fetch, output reg MEM_ack, output wire [7:0] DMA_data_
     begin
 
       for (i=0; i<256; i++)
-        regs[i] = 8'b0;     // error for <=
+        regs[i] = 8'd1;     // error for <=
 
     end
     else if (write)
@@ -285,7 +285,7 @@ module memory (output reg fetch, output reg MEM_ack, output wire [7:0] DMA_data_
 
     end
 
-    always @(current_state or WRITE_en_sync2 or valid_sync2)
+    always @(current_state or WRITE_en_sync2 or valid_sync2 or cnt)
     begin
 
         regfile_address = 0;

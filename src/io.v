@@ -1,6 +1,6 @@
 `default_nettype none
 
-module io (output reg fetch, output reg IO_ack, output wire [7:0] DMA_data_out, input wire [7:0] DMA_data_in, input [6:0] ins, input clk, input rst_n);
+module io (output reg fetch, output reg IO_ack, output reg [7:0] DMA_data_out, input wire [7:0] DMA_data_in, input [6:0] ins, input clk, input rst_n);
 
     wire BG, done, valid, WRITE_en, mode, direction, DMA_ack;
 
@@ -151,12 +151,17 @@ module io (output reg fetch, output reg IO_ack, output wire [7:0] DMA_data_out, 
 
   end
 
-//------------ END of synchroniserss --------------
+//------------ END of synchronisers --------------
 
     // memory regfile 
 
   reg [7:0] regfile_write_data, regfile_read_data, regfile_address;
   reg [7:0] regs [255:0];
+
+  // Debug
+
+  wire [7:0] debug;
+  assign debug = regs[153];
 
   integer i;
   reg write;
@@ -267,7 +272,7 @@ module io (output reg fetch, output reg IO_ack, output wire [7:0] DMA_data_out, 
 
             SOURCE1     : if (valid_sync2 && !WRITE_en_sync2) next_state = ACKNOWLEDGMENT; else next_state = SOURCE1;
 
-            ACKNOWLEDGMENT : if (!valid_sync2 && !direction_sync2) next_state = SOURCE2; else if (!valid_sync2 && direction_sync2) next_state = DESTINATION2; else next_state = ACKNOWLEDGMENT;
+            ACKNOWLEDGMENT : if (!valid_sync2 && direction_sync2) next_state = SOURCE2; else if (!valid_sync2 && !direction_sync2) next_state = DESTINATION2; else next_state = ACKNOWLEDGMENT;
 
             DEST2_ACKNOWLEDGMENT : if (!valid_sync2) next_state = DONE_STATE; else next_state = DEST2_ACKNOWLEDGMENT;
 
@@ -300,9 +305,9 @@ module io (output reg fetch, output reg IO_ack, output wire [7:0] DMA_data_out, 
 
         case (current_state)
 
-            WAITING     : IO_ack = 1'bz;
+            WAITING     : begin   end
 
-            ROLE        : IO_ack = 1'bz;
+            ROLE        : begin   end
 
             SOURCE1     : 
             begin
