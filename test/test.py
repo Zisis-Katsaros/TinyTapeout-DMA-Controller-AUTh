@@ -75,7 +75,7 @@ async def test_project(dut):
         mode_dir = 0
 
         if i == 0:
-            mode_dir = 0
+            mode_dir = 1
         elif i == 1:
             mode_dir = 1
             direction = mode_dir
@@ -124,18 +124,20 @@ async def test_project(dut):
 
     await ClockCycles(dut.clk, 5)
 
-    # Checking if the data we sent was successfuly received
-
-    if direction == 0 and dut.dut_io.regs[address_2].value == dut.dut_mem.regs[address_1].value :
-        dut._log.info(f"The destination address (dec: {address_2}) now holds the data we sent --> data sent: {dut.dut_mem.regs[address_1].value}) --- data received: {dut.dut_io.regs[address_2].value}")
-        assert 1 == 1
-    elif direction == 1 and dut.dut_mem.regs[address_2].value == dut.dut_io.regs[address_1].value :
-        dut._log.info(f"The destination address (dec: {address_2}) now holds the data we sent --> data sent: {dut.dut_io.regs[address_1].value}) --- data received: {dut.dut_mem.regs[address_2].value}")
-        assert 1 == 1
-    else:
-        dut._log.info(f"destination data: {dut.dut_mem.regs[address_2].value} --- source data: {dut.dut_io.regs[address_1].value}")
-        assert 1 == 0 
-            
+  # Checking if the data we sent was successfuly received for burst mode
+    for i in range(4): # 4 consecutive addresses in burst mode
+        if direction == 0:
+            src_val = dut.dut_mem.regs[address_1 + i].value
+            dest_val = dut.dut_io.regs[address_2 + i].value
+        else:
+            src_val = dut.dut_io.regs[address_1 + i].value
+            dest_val = dut.dut_mem.regs[address_2 + i].value
+        
+        if dest_val == src_val:
+            dut._log.info(f"Transfer {i} successful: Source [dec: {address_1 + i}] sent {src_val} --> Dest [dec: {address_2 + i}] received {dest_val}")
+        else:
+            dut._log.info(f"Transfer {i} FAILED: Source [dec: {address_1 + i}] sent {src_val} != Dest [dec: {address_2 + i}] received {dest_val}")
+            assert False, f"Data mismatch at offset {i}!"
     #assert False, f"Simulation timeout: 'done' bit did not become 1 after {max_cycles} clock cycles!"
 
     # Keep testing the module by changing the input values, waiting for

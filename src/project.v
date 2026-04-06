@@ -88,38 +88,9 @@ module tt_um_example_zafeiris (
 
   end
 
-  always @(posedge clk or negedge rst_n)
-  begin
-
-    if (!rst_n)
-      cnt <= 0;
-    else if ((current_state == IDLE_PREPARATION && enable == 1) || (current_state == DELAY))
-      cnt <= cnt + 1'b1;
-    else
-      cnt <= 0;
-
-  end
-
   // Reg_file to hold source_addr and dest_addr
 
-  reg [1:0] regs_for_addr [7:0];
-  reg regs [1:0];
-
   reg [7:0] source_addr, dest_addr;
-
-  reg [1:0] b4_config_address;
-  reg data;
-  reg [7:0] data2;
-
-  reg [2:0] address1;
-  reg address2;
-
-  reg write, write2, write3; // Using this to change the regs data only when we want, else they are left with the last value
-
-  reg [7:0] source_data;
-  reg [7:0] regs_source_data;
-
-  integer i;
 
   // regfile for addresses
 
@@ -128,30 +99,50 @@ module tt_um_example_zafeiris (
 
     if (!rst_n)
     begin
-
-      for (i=0; i<8; i++)
-        regs_for_addr[i] <= 2'b0;
+      source_addr <= 8'b0;
+      dest_addr <= 8'b0;
+      cnt <= 0;
 
     end
-    else if (write)
+    else if (current_state == IDLE_PREPARATION && enable)
     begin
-
-      regs_for_addr[address1] <= b4_config_address;
-
+      if (cnt == 0) source_addr[1:0] <= ui_in[3:2];
+      else if (cnt == 1) source_addr[3:2] <= ui_in[3:2];
+      else if (cnt == 2) source_addr[5:4] <= ui_in[3:2];
+      else if (cnt == 3) source_addr[7:6] <= ui_in[3:2];
+      else if (cnt == 4) dest_addr[1:0] <= ui_in[3:2];
+      else if (cnt == 5) dest_addr[3:2] <= ui_in[3:2];
+      else if (cnt == 6) dest_addr[5:4] <= ui_in[3:2];
+      else if (cnt == 7) dest_addr[7:6] <= ui_in[3:2];
+      cnt <= cnt + 1'b1;
+    end
+    else if (current_state == DELAY && mode == 1 && data_is_sent == 1)
+    begin
+      if (!DEST_ack_sync2) //otan feugoume apo to delay kanoume 1 fora increment
+      begin
+      source_addr <= source_addr + 1;
+      dest_addr <= dest_addr + 1;
+      end
     end
     else
-    begin
-
-      source_addr <= {regs_for_addr[3], regs_for_addr[2], regs_for_addr[1], regs_for_addr[0]};
-      dest_addr <= {regs_for_addr[7], regs_for_addr[6], regs_for_addr[5], regs_for_addr[4]};
-
-    end
+       cnt <= 0;
 
   end
 
   // regfile for direction, BG and mode
 
   integer j;
+  reg regs [1:0];
+  reg write;
+  reg write2;
+  reg write3;
+  reg [2:0] address1;
+  reg address2;
+  reg [1:0] b4_config_address;
+  reg data;
+  reg [7:0] data2;
+  reg [7:0] regs_source_data;
+  reg [7:0] source_data;
 
   always @(posedge clk or negedge rst_n)
   begin
@@ -284,9 +275,11 @@ module tt_um_example_zafeiris (
   begin
 
     if (!rst_n)
-      words_left = 1;
-    else
-      words_left = (mode) ? 4 : 1;
+      words_left <= 1;
+    else if (current_state == BUS_REQ)
+      words_left <= (mode) ? 4 : 1;
+    else if (current_state == DMA_to_DEST_data && DEST_ack_sync2)
+      words_left <= words_left - 1;
 
   end
   
@@ -493,9 +486,6 @@ module tt_um_example_zafeiris (
       DMA_to_SRC            :
       begin
 
-        if (words_left == 3 || words_left == 2 || words_left == 1)
-          source_addr = source_addr + 1;
-
         valid = 1'd1;
         WRITE_en = 1'd0;
         BR = 1'b1;
@@ -524,9 +514,6 @@ module tt_um_example_zafeiris (
       DMA_to_DEST_addr      :
       begin
 
-        if (words_left == 3 || words_left == 2 || words_left == 1)
-          dest_addr = dest_addr + 1;
-
         transfer_bus = dest_addr;
         valid = 1'd1;
         WRITE_en = 1'd1;
@@ -549,20 +536,15 @@ module tt_um_example_zafeiris (
         transfer_bus = source_data;
         valid = 1'd1;
         WRITE_en = 1'd1;
-        BR = 1'b1; 
-        
-        if (DEST_ack_sync2)
-          words_left = words_left - 1;
+        BR = 1'b1;
 
       end
 
       DONE                  : done = 1'd1;
 
       default               : done = 0;
-
+      
     endcase
-    
-
   end
 
 endmodule

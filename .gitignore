@@ -12,3 +12,11 @@ test/__pycache__/
 test/results.xml
 test/gate_level_netlist.v
 TTvenv/
+
+# Virtual Environments
+.venv/
+.venv-wsl/
+venv/
+env/
+__pycache__/
+project_old.v
