@@ -59,8 +59,8 @@ async def test_project(dut):
     # Configuring the ui_in
 
     # Define two 8-bit addresses to send
-    address_1 = 0x01  # Source address (8 bit address, maximum hex value: 0xFF)
-    address_2 = 0x9A  # Destination address (8 bit address, maximum hex value: 0xFF)
+    address_1 = 0x15  # Source address (8 bit address, maximum hex value: 0xFF)
+    address_2 = 0xBB  # Destination address (8 bit address, maximum hex value: 0xFF)
     # Combine them into a 16-bit word (addr_2 in upper 8 bits, addr_1 in lower 8 bits)
     full_address = (address_2 << 8) | address_1
 
@@ -69,7 +69,7 @@ async def test_project(dut):
         await FallingEdge(dut.clk)
 
         # Extract 2 bits for the current iteration
-        # Cycle 0 gets bits 0-1, Cycle 1 gets bits 2-3, etc.
+        # Cycle 0 gets bits 0-1, Cycle 1 gets bits 2-3, etc. --- IMPORTANT !!! Always the first address we sent is the source address
         current_2bits = (full_address >> (i * 2)) & 0b11
         
         mode_dir = 0
@@ -77,8 +77,8 @@ async def test_project(dut):
         if i == 0:
             mode_dir = 0
         elif i == 1:
-            mode_dir = 0
-            direction = 0
+            mode_dir = 1
+            direction = mode_dir
         else:
             mode_dir = 0
         
@@ -130,8 +130,10 @@ async def test_project(dut):
         dut._log.info(f"The destination address (dec: {address_2}) now holds the data we sent --> data sent: {dut.dut_mem.regs[address_1].value}) --- data received: {dut.dut_io.regs[address_2].value}")
         assert 1 == 1
     elif direction == 1 and dut.dut_mem.regs[address_2].value == dut.dut_io.regs[address_1].value :
+        dut._log.info(f"The destination address (dec: {address_2}) now holds the data we sent --> data sent: {dut.dut_io.regs[address_1].value}) --- data received: {dut.dut_mem.regs[address_2].value}")
         assert 1 == 1
     else:
+        dut._log.info(f"destination data: {dut.dut_mem.regs[address_2].value} --- source data: {dut.dut_io.regs[address_1].value}")
         assert 1 == 0 
             
     #assert False, f"Simulation timeout: 'done' bit did not become 1 after {max_cycles} clock cycles!"

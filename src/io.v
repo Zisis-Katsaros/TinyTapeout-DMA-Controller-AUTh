@@ -261,7 +261,7 @@ module io (output reg fetch, output reg IO_ack, output reg [7:0] DMA_data_out, i
 
     end
 
-    always @(current_state or BG or valid_sync2 or direction_sync2 or mode_sync2 or done_sync2 or WRITE_en_sync2)
+    always @(current_state or BG_sync2 or valid_sync2 or direction_sync2 or mode_sync2 or done_sync2 or WRITE_en_sync2 or DMA_ack_sync2)
     begin
 
         case (current_state)
@@ -290,7 +290,7 @@ module io (output reg fetch, output reg IO_ack, output reg [7:0] DMA_data_out, i
 
     end
 
-    always @(current_state or WRITE_en_sync2 or valid_sync2)
+    always @(current_state or WRITE_en_sync2 or valid_sync2 or cnt)
     begin
 
         regfile_address = 0;
@@ -300,8 +300,9 @@ module io (output reg fetch, output reg IO_ack, output reg [7:0] DMA_data_out, i
         fetch = 0;
         write_target_address = 0;
         regfile_write_data = 0;
-        // data_oe = 0;
         DMA_data_out = 0;
+        // data_oe = 0;
+
 
         case (current_state)
 

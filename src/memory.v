@@ -256,7 +256,7 @@ module memory (output reg fetch, output reg MEM_ack, output reg [7:0] DMA_data_o
 
     end
 
-    always @(current_state or BG or valid_sync2 or direction_sync2 or mode_sync2 or done_sync2 or WRITE_en_sync2)
+    always @(current_state or BG_sync2 or valid_sync2 or direction_sync2 or mode_sync2 or done_sync2 or WRITE_en_sync2 or DMA_ack_sync2)
     begin
 
         case (current_state)
@@ -295,6 +295,7 @@ module memory (output reg fetch, output reg MEM_ack, output reg [7:0] DMA_data_o
         fetch = 0;
         write_target_address = 0;
         regfile_write_data = 0;
+        DMA_data_out = 0;
         // data_oe = 0;
 
         case (current_state)

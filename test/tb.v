@@ -42,7 +42,7 @@ module tb ();
 
       .ui_in  ({ui_in[4:3], (fetch_io || fetch_mem), ui_in[2:0], IO_ack, MEM_ack}),    // Dedicated inputs
       .uo_out (uo_out),   // Dedicated outputs
-      .uio_in (DMA_data_out_mem),   // IOs: Input path --- DMA_data_out_mem because source is MEM now, so only MEM sends data to DMA 
+      .uio_in (DMA_data_out_mem | DMA_data_out_io),   // IOs: Input path --- Whoever sends data to DMA taeks control of the wire --- We can do this because only the source device sends data to the DMA, so no data corruption occures
       .uio_out(uio_out),  // IOs: Output path
       .uio_oe (uio_oe),   // IOs: Enable path (active high: 0=input, 1=output)
       .ena    (ena),      // enable - goes high when design is selected

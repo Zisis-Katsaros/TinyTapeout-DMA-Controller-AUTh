@@ -24,12 +24,12 @@ module tt_um_example_zafeiris (
   // List all unused inputs to prevent warnings
   wire _unused = &{ena, 1'b0};
 
-  // -------------- DECLARING ACKNOWLEDGMENT VALUES STORED IN ui_i[0] and ui_i[1] (reused) ---------------
+  // -------------- DECIDING WHO IS SRC AND WHO IS DEST ---------------
 
   wire SRC_ack, DEST_ack;
-
-  assign SRC_ack = ui_in[0];
-  assign DEST_ack = ui_in[1]; 
+  // IMPORTANT !!! ui_in[0] --> the input of the memory acknowledgment & ui_in[1] --> the input of the io acknowledgment & direction = 0 means mem --> io 
+  assign SRC_ack = (direction) ? ui_in[1] : ui_in[0];
+  assign DEST_ack = (direction) ? ui_in[0] : ui_in[1];
 
   // --------------     END     -----------------------
 
