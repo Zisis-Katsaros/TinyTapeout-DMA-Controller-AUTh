@@ -26,5 +26,5 @@
     }
   },
   "postCreateCommand": "echo 'source /ttsetup/venv/bin/activate' >> ~/.bashrc",
-  "postStartCommand": "sh /ttsetup/copy_tt_support_tools.sh"
+  "postStartCommand": "/ttsetup/copy_tt_support_tools.sh"
 }
