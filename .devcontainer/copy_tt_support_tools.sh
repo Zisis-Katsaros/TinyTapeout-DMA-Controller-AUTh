@@ -1,6 +1,12 @@
-#! /bin/sh
+#!/bin/sh
 
-if [ ! -L tt ]; then
-    cp -R /ttsetup/tt-support-tools tt
-    cd tt && git pull && cd ..
+set -eu
+
+if [ ! -d tt ]; then
+    mkdir tt
+    cp -R /ttsetup/tt-support-tools/. tt/
+fi
+
+if [ -d tt/.git ]; then
+    rm -rf tt/.git
 fi
