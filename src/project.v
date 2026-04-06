@@ -16,6 +16,11 @@ module tt_um_auth_dmac (
     input  wire       rst_n     // reset_n - low to reset
 );
 
+    // Timeout limit
+    localparam timeout_limit = 12; // If no rtrn_rise pulse is detected within the timeout_limit in states: RECEIVE, SENDaddr, SENDdata
+                                            // then timeout and return to IDLE state with BR and done low
+    localparam timeout_cntr_width = $clog2(timeout_limit+1);
+
     // Inputs
     wire       start;
     wire       BG;
@@ -45,23 +50,16 @@ module tt_um_auth_dmac (
     reg dst_addr_cntr;
     reg dst_data_cntr;
     reg [1:0] words_left;
-
-    // FSM state
-    reg [2:0] current_state;
-    reg [2:0] next_state;
-
-    localparam [2:0] IDLE       = 3'b000;
-    localparam [2:0] PREPARATION = 3'b001;
-    localparam [2:0] WAIT4BG    = 3'b010;
-    localparam [2:0] SRC_SEND   = 3'b011;
-    localparam [2:0] RECEIVE    = 3'b100;
-    localparam [2:0] SENDaddr   = 3'b101;
-    localparam [2:0] SENDdata   = 3'b110;
-
+    reg [timeout_cntr_width-1:0] timeout_cntr; 
+    
     // 2FF synchronizers for CDC 
     reg rtrn_ff1, rtrn_ff2, rtrn_ff2_d;
     wire rtrn_sync;
     wire rtrn_rise;
+
+    // timeout signals
+    wire wait_for_rtrn;
+    wire timeout;                                        
 
     // Input Mapping
     assign start = ui_in[7];
@@ -87,7 +85,22 @@ module tt_um_auth_dmac (
     assign rtrn_rise = rtrn_sync & ~rtrn_ff2_d;
     // assign rtrn_rise = rtrn_ff1 & ~rtrn_ff2; 
 
-    
+    // timeout logic
+    assign wait_for_rtrn = (current_state == RECEIVE) || (current_state == SENDaddr) || (current_state == SENDdata);
+    assign timeout = wait_for_rtrn && !rtrn_rise && (timeout_cntr == timeout_limit-1);
+
+    // FSM 
+    reg [2:0] current_state;
+    reg [2:0] next_state;
+
+    localparam [2:0] IDLE       = 3'b000;
+    localparam [2:0] PREPARATION = 3'b001;
+    localparam [2:0] WAIT4BG    = 3'b010;
+    localparam [2:0] SRC_SEND   = 3'b011;
+    localparam [2:0] RECEIVE    = 3'b100;
+    localparam [2:0] SENDaddr   = 3'b101;
+    localparam [2:0] SENDdata   = 3'b110;
+
     always @(posedge clk or negedge rst_n) begin: SEQUENTIAL_LOGIC
         if (!rst_n) begin
             // reset sync FFs
@@ -100,6 +113,7 @@ module tt_um_auth_dmac (
             src_send_cntr <= 2'b0;
             dst_addr_cntr <= 1'b0;
             dst_data_cntr <= 1'b0;
+            timeout_cntr <= {timeout_cntr_width{1'b0}};
 
             // reset internal regs
             mode <= 1'b0;
@@ -134,6 +148,7 @@ module tt_um_auth_dmac (
                     src_send_cntr <= 2'b0;
                     dst_addr_cntr <= 1'b0;
                     dst_data_cntr <= 1'b0;
+                    timeout_cntr <= {timeout_cntr_width{1'b0}};
                 end
                 PREPARATION: begin
                     case (prep_cntr) // preparation sequence
@@ -163,10 +178,12 @@ module tt_um_auth_dmac (
                     src_send_cntr <= 2'b0;
                     dst_addr_cntr <= 1'b0;
                     dst_data_cntr <= 1'b0;
+                    timeout_cntr <= {timeout_cntr_width{1'b0}};
                 end
                 SRC_SEND: begin
                     dst_addr_cntr <= 1'b0;
                     dst_data_cntr <= 1'b0;
+                    timeout_cntr <= {timeout_cntr_width{1'b0}};
 
                     // update src_addr send counter
                     if (src_send_cntr != 2'b10) src_send_cntr <= src_send_cntr + 1'b1;
@@ -176,12 +193,18 @@ module tt_um_auth_dmac (
                     dst_addr_cntr <= 1'b0;
                     dst_data_cntr <= 1'b0;
 
+                    if (rtrn_rise) timeout_cntr <= {timeout_cntr_width{1'b0}};
+                    else if (timeout_cntr != timeout_limit) timeout_cntr <= timeout_cntr + 1;
+
                     // capture data from transfer_bus
                     if (rtrn_rise) data_buffer <= uio_in; 
                 end
                 SENDaddr: begin
                     src_send_cntr <= 2'b0;
                     dst_data_cntr <= 1'b0;
+
+                    if (rtrn_rise) timeout_cntr <= {timeout_cntr_width{1'b0}};
+                    else if (timeout_cntr != timeout_limit) timeout_cntr <= timeout_cntr + 1;
 
                     // update dest_addr send counter
                     if (dst_addr_cntr == 1'b0) dst_addr_cntr <= 1'b1;
@@ -190,6 +213,9 @@ module tt_um_auth_dmac (
                 SENDdata: begin
                     src_send_cntr <= 2'b0;
                     dst_addr_cntr <= 1'b0;
+
+                    if (rtrn_rise) timeout_cntr <= {timeout_cntr_width{1'b0}};
+                    else if (timeout_cntr != timeout_limit) timeout_cntr <= timeout_cntr + 1;
 
                     // update dest_data send counter
                     if (dst_data_cntr == 1'b0) dst_data_cntr <= 1'b1;
@@ -207,6 +233,7 @@ module tt_um_auth_dmac (
                     src_send_cntr <= 2'b0;
                     dst_addr_cntr <= 1'b0;
                     dst_data_cntr <= 1'b0;
+                    timeout_cntr <= {timeout_cntr_width{1'b0}};
                 end
             endcase
         end
@@ -230,16 +257,23 @@ module tt_um_auth_dmac (
             end
             RECEIVE: begin
                 if (rtrn_rise) next_state = SENDaddr;
+                else if (timeout) next_state = IDLE;
             end
             SENDaddr: begin
                 if ((dst_addr_cntr == 1'b1) && rtrn_rise) begin
                     next_state = SENDdata;
+                end
+                else if (timeout) begin
+                    next_state = IDLE;
                 end
             end
             SENDdata: begin
                 if ((dst_data_cntr == 1'b1) && rtrn_rise) begin
                     if (words_left == 2'b00) next_state = IDLE; // move to idle if no more words left
                     else next_state = SRC_SEND; // else go back to src_send
+                end
+                else if (timeout) begin
+                    next_state = IDLE;
                 end
             end
             default: begin
