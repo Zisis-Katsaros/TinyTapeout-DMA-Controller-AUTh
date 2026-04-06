@@ -15,6 +15,8 @@ module tb ();
 
   // Wire up the inputs and outputs:
   reg clk;
+  reg mem_clk;
+  reg io_clk;
   reg rst_n;
   reg ena;
   reg [7:0] ui_in;
@@ -22,10 +24,18 @@ module tb ();
   wire [7:0] uo_out;
   wire [7:0] uio_out;
   wire [7:0] uio_oe;
+  wire _keep_clocks = clk ^ mem_clk ^ io_clk; // so the simulator doesn't optimize away the unused clocks
+
 `ifdef GL_TEST
   wire VPWR = 1'b1;
   wire VGND = 1'b0;
 `endif
+
+ initial begin
+    clk = 1'b0;
+    mem_clk = 1'b0;
+    io_clk = 1'b0;
+  end
 
   // Replace tt_um_example with your module name:
   tt_um_example user_project (
