@@ -25,7 +25,12 @@ from timeout_helpers import (
 # For all tests
 rtrn_delay = 3
 
+# !!! IMPORTANT !!!: set timeout_limit same as the localparam on project.v
 timeout_limit = 12
+# !!!!!!!!!!!!!!!!!
+
+    # explanation: Internal signals are not visible after synthesis so even if tests pass, during gds check tests that relay on internal 
+    # signals will through an error
 
 # Single Word Mode Test
 @cocotb.test()
