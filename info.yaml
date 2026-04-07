@@ -1,7 +1,7 @@
 # Tiny Tapeout project information
 project:
   title:        "AUTh DMA Controller"      # Project title
-  author:       "Spiridon Vasileiou, Zaphirios Giapoutzis, Athanasios Karatzas, Zisis Katsaros, Kiriakos Kokkinos"      # Your name
+  author:       "Spyridon Vasileiou, Zaphirios Giapoutzis, Athanasios Karatzas, Zisis Katsaros, Kiriakos Kokkinos"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
   description:  "8-bit DMA Controller for transferring data between memory and I/O device"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
