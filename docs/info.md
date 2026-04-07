@@ -66,7 +66,7 @@ The I/O pins are configured as follows.
 - `S5: SENDaddr` - Sending address to destination.
 - `S6: SENDdata` - Sending data to destination.
 
-![DMAC State Diagram](STATE_DIAGRAM_3.PNG)
+![DMAC State Diagram](STATE_DIAGRAM_4.PNG)
 
 Notes:
 
