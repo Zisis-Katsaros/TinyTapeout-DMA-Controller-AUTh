@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: © 2024 Tiny Tapeout
+# SPDX-FileCopyrightText: © 2026 Zisis Katsaros
 # SPDX-License-Identifier: Apache-2.0
 
 import cocotb
@@ -14,11 +14,23 @@ from general_test_helpers import (
 )
 from randomized_clock_helpers import _init_random_clocks
 from speed_profile_helpers import _init_variable_clocks, _period_from_speed
+from timeout_helpers import (
+    _timeout_in_receive,
+    _timeout_in_sendaddr,
+    _timeout_in_senddata,
+)
 
 
 
 # For all tests
 rtrn_delay = 3
+
+# !!! IMPORTANT !!!: set timeout_limit same as the localparam on project.v
+timeout_limit = 12
+# !!!!!!!!!!!!!!!!!
+
+    # explanation: Internal signals are not visible after synthesis so even if tests pass, during gds check tests that relay on internal 
+    # signals will through an error
 
 # Single Word Mode Test
 @cocotb.test()
@@ -163,3 +175,16 @@ async def test_all_speed_profile_combinations(dut):
                 f"direction={direction}, mode={mode}, "
                 f"src_addr=0x{src_addr:02X}, dst_addr=0x{dst_addr:02X}, payload={payload}; {exc}"
             ) from exc
+
+# Timeout test
+@cocotb.test()
+async def test_return_wait_timeouts(dut, timeout_limit=timeout_limit):
+    await _init_clock(dut)
+
+    src_addr = 0x34
+    dst_addr = 0xA1
+    payload = [0x5C]
+
+    await _timeout_in_receive(dut, src_addr, dst_addr, timeout_limit)
+    await _timeout_in_sendaddr(dut, src_addr, dst_addr, payload, rtrn_delay, timeout_limit)
+    await _timeout_in_senddata(dut, src_addr, dst_addr, payload, rtrn_delay, timeout_limit)
