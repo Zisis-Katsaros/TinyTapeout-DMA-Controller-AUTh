@@ -157,10 +157,10 @@ python -m pip install --upgrade pip
 python -m pip install -r test/requirements.txt
 ```
 
-If you see an import error for `cocotb_tools`, install it explicitly:
+If you see an import error for `cocotb_tools`, reinstall `cocotb` and the test requirements:
 
 ```bash
-python -m pip install cocotb-tools
+python -m pip install -r test/requirements.txt
 ```
 
 Special Case: Python 3.14+ (macOS Compatibility): 
@@ -232,7 +232,7 @@ If GTKWave is installed:
 gtkwave test/sim_build/rtl/tb.fst test/tb.gtkw
 ```
 
-Otherwise you can use [Surfer](https://surfer-project.org/), an online waveform viewer. Surfer can also be installed as a VS Code extension. You can load a saved state via `\test\63e5afbb-47ec-4432-828d-6531b01ec335` file, which includes all important signals. 
+Otherwise you can use [Surfer](https://surfer-project.org/), an online waveform viewer. Surfer can also be installed as a VS Code extension. You can load a saved state via `\test\state_preset` file, which includes all important signals. 
 
 ### 10. Troubleshooting
 
@@ -241,7 +241,8 @@ Otherwise you can use [Surfer](https://surfer-project.org/), an online waveform 
 - `ModuleNotFoundError: cocotb`:
 	- Activate `.venv` and reinstall `-r test/requirements.txt`.
 - `ModuleNotFoundError: cocotb_tools`:
-	- Run `python -m pip install cocotb-tools`.
+	- Run `python -m pip install -r test/requirements.txt`.
+	- If needed, install cocotb directly with `python -m pip install cocotb`.
 - Tests time out or fail unexpectedly:
 	- Ensure you are running the repository's intended branch and rerun with a clean `test/sim_build` directory.
 - Zsh parse error: 
