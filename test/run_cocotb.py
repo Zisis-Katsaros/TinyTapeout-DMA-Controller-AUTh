@@ -6,7 +6,7 @@ from cocotb_tools.runner import get_runner
 
 def main() -> None:
     root = Path(__file__).resolve().parent
-    src = root.parent / "src" / "4state_project.v"
+    src = root.parent / "src" / "6state_project.v"
     tb = root / "tb.v"
     build_dir = root / "sim_build" / "rtl"
 
