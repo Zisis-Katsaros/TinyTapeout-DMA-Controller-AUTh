@@ -8,7 +8,7 @@
 
 ### Authors
 
-Spiridon Basiliou  
+Spiridon Vasileiou  
 Zaphirios Giapoutzis  
 Athanasios Karatzas  
 Zisis Katsaros  
