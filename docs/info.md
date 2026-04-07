@@ -54,24 +54,37 @@ The I/O pins are configured as follows.
 
 - `uio[7:0]`: `transfer_bus[7:0]`
 
-## State Diagram
+## How it works (+ State Diagram)
+As mentioned before, our DMA Controller is structured as an FSM. In order to explain how it works, we will present each state individually. To further assist the reader's understanding, there is also a state diagram below the following list.
 
 ### States
 
-- `S0: IDLE` - Idle state before `start` is asserted.
-- `S1: PREPARATION` - Loading CPU instructions.
-- `S2: WAIT4BG` - Waiting for the CPU to grant control over the system bus.
-- `S3: SRC_SEND` - Sending address to source.
-- `S4: RECEIVE` - Receiving data from source.
-- `S5: SENDaddr` - Sending address to destination.
-- `S6: SENDdata` - Sending data to destination.
+- `S0: IDLE` 
+	- The DMAC stays in the `IDLE` state until the CPU pulls up the `start` signal.
+- `S1: PREPARATION` 
+	- After the `start` signal is set to high, the FSM moves to `PREPARATION` state, where in the span of four cycles `mode`, `direction`, `src_addr` and `dest_addr` are fetched via `cfg_in`.
+- `S2: WAIT4BG` 
+	- Once the process above is done the `BR` signal is set to high and the FSM stays in `WAIT4BG` until the CPU grants access to the system bus via `BG` input signal.
+- `S3: SRC_SEND` 
+	- After `BG` is set to high, `SRC_SEND` state follows. In this state `transfer_bus` and `target` outputs are configured so that they convey `src_addr` to either the Memory or the I/O Device (depending on `direction`). After one cycle `valid` is set to high and only then does the receiver fetch the address. This is done in order to mitigate metastability during CDC. After one more cycle the FSM moves to `S4`.  
+- `S4: RECEIVE`
+	- In this state the FSM waits for a `rtrn` signal from the receiver. Shortly after `rtrn` is set to high, a `rtrn_rise` pulse is generated allowing the DMAC to fetch the data from the `transfer_bus`. Additionally, an `ack` signal is sent back so that the device that sent the data knows that it was received. 
+	- It is important to mention that the source does not send an acknowledgement informing the DMAC that the `src_addr` was received. Rather, the `rtrn` signal functions both as an *acknowledgement* (for the `src_addr`) and as a *fetch* signal (for the data). This was done in order to fit the 8 pin input budget. 
+- `S5: SENDaddr`
+	- After `rtrn_rise` pulses the FSM moves to `SENDaddr` state where the DMAC sends the `dst_addr` to the destination. The address and the target are loaded to the `transfer_bus` and `target` outputs and after one cycle `valid` is set to high. The DMAC now waits for a `rtrn_rise` pulse similar to the `RECEIVE` state. 
+- `S6: SENDdata`
+	- In `SENDdata` the DMAC sends data to the destination and the process is identical to `SENDaddr`. After `rtrn_rise` pulses, the FSM moves to `S3` if there are more words left to transfer; otherwise, it moves to `S0`. In the latter case `BR` is set to low and `done` is set to high, indicating that the transfer has been successfully completed.
+- EXTRA: Timeout logic
+	- This is not a state, but rather a check happening in every state where a `rtrn_rise` pulse is required to move to a subsequent state (`S4`, `S5`, `S6`). By setting the localparam `timeout_limit` in `project.v` to the desired number of clock cycles the FSM will move to `S0` if no `rtrn_rise` pulse is generated in the span of `timeout_limit` clock cycles after the FSM has entered either `S4`, `S5` or `S6`. In such case both `BR` and `done` are set to low indicating that the transfer has failed.
 
-![DMAC State Diagram](STATE_DIAGRAM_3.PNG)
+![DMAC State Diagram](STATE_DIAGRAM_4.PNG)
 
 Notes:
 
-- In the state diagram above, `rtrn_rise` is an internal pulse generated shortly after `rtrn` rises to high.
+- `rtrn_rise` is an internal pulse generated shortly after `rtrn` rises to high.
+- Similarly, `timeout` is an internal signal indicating that `rtrn_rise` has not been generated in time
 - `wrds_lft` is not an actual signal; it indicates whether there are still words left to transfer in four-word burst mode.
+
 
 ## How to test
 
