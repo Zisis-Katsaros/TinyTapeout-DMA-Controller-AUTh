@@ -85,7 +85,7 @@ As mentioned before, our DMA Controller is structured as an FSM. In order to exp
 To overcome this problem we created this state which makes the `valid` signal low and moves to the `DMA_to_DEST_data` state when the received acknpwledgment bit goes low as well, which means that the destination device didn't get stuck.
 - `S6: DONE`: After the procedure has finishes sand all the data are sent, the DMA raises the done bit for **1** clock cycle and then returns to the `IDLE_PREPARATION` state.
 
-![DMAC State Diagram](DMAC_FSM.png)
+![DMAC State Diagram](./DMAC_FSM.png)
 
 ## How to test
 
