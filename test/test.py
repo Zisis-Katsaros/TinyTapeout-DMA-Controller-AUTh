@@ -25,9 +25,9 @@ async def test_project_single_mode(dut):
     dut._log.info("Start")
 
     # Set the clock period to 10 us (100 KHz)
-    clock = Clock(dut.clk, 550, unit="us")
-    clock_mem = Clock(dut.clk_mem, 50, unit="us")
-    clock_io = Clock(dut.clk_io, 150, unit="us")
+    clock = Clock(dut.clk, 10, unit="us")
+    clock_mem = Clock(dut.clk_mem, 500, unit="us")
+    clock_io = Clock(dut.clk_io, 100, unit="us")
     cocotb.start_soon(clock.start())
     cocotb.start_soon(clock_mem.start())
     cocotb.start_soon(clock_io.start())
@@ -59,8 +59,8 @@ async def test_project_single_mode(dut):
     # Configuring the ui_in
 
     # Define two 8-bit addresses to send
-    address_1 = 0x15  # Source address (8 bit address, maximum hex value: 0xFF)
-    address_2 = 0xBB  # Destination address (8 bit address, maximum hex value: 0xFF)
+    address_1 = 0x03  # Source address (8 bit address, maximum hex value: 0xFF)
+    address_2 = 0x10  # Destination address (8 bit address, maximum hex value: 0xFF)
     # Combine them into a 16-bit word (addr_2 in upper 8 bits, addr_1 in lower 8 bits)
     full_address = (address_2 << 8) | address_1
 
@@ -144,9 +144,9 @@ async def test_project_burst_mode(dut):
     dut._log.info("Start")
 
     # Set the clock period to 10 us (100 KHz)
-    clock = Clock(dut.clk, 100, unit="us")
-    clock_mem = Clock(dut.clk_mem, 250, unit="us")
-    clock_io = Clock(dut.clk_io, 1, unit="us")
+    clock = Clock(dut.clk, 10, unit="us")
+    clock_mem = Clock(dut.clk_mem, 500, unit="us")
+    clock_io = Clock(dut.clk_io, 100, unit="us")
     cocotb.start_soon(clock.start())
     cocotb.start_soon(clock_mem.start())
     cocotb.start_soon(clock_io.start())
@@ -178,8 +178,8 @@ async def test_project_burst_mode(dut):
     # Configuring the ui_in
 
     # Define two 8-bit addresses to send
-    address_1 = 0x15  # Source address (8 bit address, maximum hex value: 0xFF)
-    address_2 = 0xBB  # Destination address (8 bit address, maximum hex value: 0xFF)
+    address_1 = 0x11  # Source address (8 bit address, maximum hex value: 0xFF)
+    address_2 = 0x22  # Destination address (8 bit address, maximum hex value: 0xFF)
     # Combine them into a 16-bit word (addr_2 in upper 8 bits, addr_1 in lower 8 bits)
     full_address = (address_2 << 8) | address_1
 
@@ -196,7 +196,7 @@ async def test_project_burst_mode(dut):
         if i == 0:
             mode_dir = 1 # mode
         elif i == 1:
-            mode_dir = 1 # direction
+            mode_dir = 0 # direction
             direction = mode_dir
         else:
             mode_dir = 0

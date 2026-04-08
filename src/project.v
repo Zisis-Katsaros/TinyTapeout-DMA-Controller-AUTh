@@ -108,7 +108,7 @@ module tt_um_example_zafeiris (
   reg [7:0] source_addr, dest_addr;
 
   reg [1:0] b4_config_address;
-  reg data;
+  reg mode_dir;
   reg [7:0] data2;
 
   reg [2:0] address1;
@@ -186,7 +186,7 @@ module tt_um_example_zafeiris (
     else if (write2)
     begin
 
-      regs[address2] <= data; // address2 = 0 mode, 1 direction
+      regs[address2] <= mode_dir; // address2 = 0 mode, 1 direction
 
     end
     else
@@ -213,7 +213,7 @@ module tt_um_example_zafeiris (
     else if (write3)
     begin
 
-      regs_source_data <= data2; // address2 = 0 mode, 1 direction, 2 source_data
+      regs_source_data <= transfer_bus; //data2 // address2 = 0 mode, 1 direction, 2 source_data
 
     end
     else
@@ -244,7 +244,9 @@ module tt_um_example_zafeiris (
   wire fetch; // fetch/acknowledgement
   wire BG;
   wire enable;
+  wire [1:0] bit_2_address_sent;
 
+  assign bit_2_address_sent = ui_in[3:2];
   assign enable = ui_in[7];
   assign BG = ui_in[6];
   assign fetch = ui_in[5];
@@ -255,7 +257,6 @@ module tt_um_example_zafeiris (
   reg done;
   reg WRITE_en;
   reg BR;
-  // -- done with mode -- reg bus_dir; // same values as direction --> informs memory and io who is source and who destination (will be used in testbench)
   reg ack;
 
   // Output assignments
@@ -372,7 +373,7 @@ module tt_um_example_zafeiris (
     address1 = 0;
     address2 = 0;
     b4_config_address = 0;
-    data = 0;
+    mode_dir = 0;
     data2 = 0;
     BR = 1'b0;
     valid = 1'd0;
@@ -401,8 +402,8 @@ module tt_um_example_zafeiris (
             address2 = 1'd0; 
 
             // Get the input data
-            data = ui_in[4]; // get mode
-            b4_config_address = ui_in[3:2];
+            mode_dir = ui_in[4]; // get mode
+            b4_config_address = bit_2_address_sent;
           
           end
 
@@ -417,8 +418,8 @@ module tt_um_example_zafeiris (
             address2 = 1'd1; 
 
             // Get the input data
-            data = ui_in[4]; // get direction
-            b4_config_address = ui_in[3:2];            
+            mode_dir = ui_in[4]; // get direction
+            b4_config_address = bit_2_address_sent;            
 
           end
 
@@ -432,7 +433,7 @@ module tt_um_example_zafeiris (
             address1 = 3'd2; // third 2 bits of dest address
 
             // Get the input data
-            b4_config_address = ui_in[3:2];
+            b4_config_address = bit_2_address_sent;
 
           end
 
@@ -446,7 +447,7 @@ module tt_um_example_zafeiris (
             address1 = 3'd3; // fourth 2 bits of dest address
 
             // Get the input data
-            b4_config_address = ui_in[3:2];
+            b4_config_address = bit_2_address_sent;
 
           end
 
@@ -460,7 +461,7 @@ module tt_um_example_zafeiris (
             address1 = 3'd4; // first 2 bits of dest address
 
             // Get the input data
-            b4_config_address = ui_in[3:2];
+            b4_config_address = bit_2_address_sent;
 
           end
 
@@ -474,7 +475,7 @@ module tt_um_example_zafeiris (
             address1 = 3'd5; // second 2 bits of dest address
 
             // Get the input data
-            b4_config_address = ui_in[3:2];
+            b4_config_address = bit_2_address_sent;
 
           end
 
@@ -488,7 +489,7 @@ module tt_um_example_zafeiris (
             address1 = 3'd6; // third 2 bits of dest address
 
             // Get the input data
-            b4_config_address = ui_in[3:2];
+            b4_config_address = bit_2_address_sent;
 
           end
 
@@ -502,7 +503,7 @@ module tt_um_example_zafeiris (
             address1 = 3'd7; // fourth 2 bits of dest address
 
             // Get the input data
-            b4_config_address = ui_in[3:2];
+            b4_config_address = bit_2_address_sent;
 
           end
       
@@ -533,8 +534,8 @@ module tt_um_example_zafeiris (
 
         if (fetch_sync2)
         begin
-
-          data2 = uio_in; // Storing data in source_data
+          // data2
+          transfer_bus = uio_in; // Storing data in source_data
           write3 = 1;
           ack = 1;
 
