@@ -199,15 +199,15 @@ module dma_10_state(
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= S0_IDLE_AND_LOAD;
-            src_addr <= 8'b00000000;
-            dst_addr <= 8'b00000000;
-            data_reg <= 8'b00000000;
-            mode_reg <= 1'b0;
-            direction_reg <= 1'b0;
+            //src_addr <= 8'b00000000;
+            //dst_addr <= 8'b00000000;
+            //data_reg <= 8'b00000000;
+            //mode_reg <= 1'b0;
+            //direction_reg <= 1'b0;
 
-            cycle_count <= 3'b000;
+            //cycle_count <= 3'b000;
             wait_enable_low  <= 1'b0;
-            words_left <= 3'd0;
+            //words_left <= 3'd0;
 
             transfer_bus_out <= 8'h00;
             transfer_bus_oe <= 1'b0;
