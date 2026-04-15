@@ -148,7 +148,7 @@ module dma_10_state(
 
     assign fetch_sync = fetch_ff2;
 
-    always @(posedge clk /*or negedge rst_n*/) begin
+    always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             fetch_ff1 <= 1'b0;
             fetch_ff2 <= 1'b0;
@@ -164,7 +164,7 @@ module dma_10_state(
 
     assign external_capture_sync = external_capture_ff2;
 
-    always @(posedge clk /* or negedge rst_n*/) begin
+    always @(posedge clk  or negedge rst_n) begin
         if (!rst_n) begin
             external_capture_ff1 <= 1'b0;
             external_capture_ff2 <= 1'b0;
@@ -196,7 +196,7 @@ module dma_10_state(
     // Main sequential logic
     // ============================================================
 
-    always @(posedge clk /*or negedge rst_n*/) begin
+    always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= S0_IDLE_AND_LOAD;
             src_addr <= 8'b00000000;
