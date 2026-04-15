@@ -499,7 +499,7 @@ module dma_10_state(
                     state <= S0_IDLE_AND_LOAD;
                     //Just in case
                     cycle_count <= 3'b000;
-                    wait_enable_low <= 1'b0;
+                    wait_enable_low <= 1'b0
                 end
 
             endcase
