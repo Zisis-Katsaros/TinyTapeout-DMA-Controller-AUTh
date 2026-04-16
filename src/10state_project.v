@@ -178,19 +178,19 @@ module dma_10_state(
     // State encoding (10 top-level states)
     // ============================================================
 
-    localparam S0_IDLE_AND_LOAD = 4'b0000;
-    localparam S1_BUS_ACCESS = 4'b0001;
-    localparam S2A_SEND_SRC_ADDR_WAIT_CAPTURE = 4'b0010;
-    localparam S2B_SEND_SRC_ADDR_WAIT_RELEASE = 4'b0011;
-    localparam S3A_WAIT_FETCH = 4'b0100;
-    localparam S3B_WAIT_FETCH_DROP = 4'b0101;
-    localparam S4A_SEND_DST_ADDR_WAIT_CAPTURE = 4'b0110;
-    localparam S4B_SEND_DST_ADDR_WAIT_RELEASE = 4'b0111;
-    localparam S5A_SEND_DATA_WAIT_CAPTURE = 4'b1000;
-    localparam S5B_SEND_DATA_WAIT_RELEASE = 4'b1001;
+    localparam S0_IDLE_AND_LOAD = 10'b0000000001;
+    localparam S1_BUS_ACCESS = 10'b0000000010;
+    localparam S2A_SEND_SRC_ADDR_WAIT_CAPTURE = 10'b0000000100;
+    localparam S2B_SEND_SRC_ADDR_WAIT_RELEASE = 10'b0000001000;
+    localparam S3A_WAIT_FETCH = 10'b0000010000;
+    localparam S3B_WAIT_FETCH_DROP = 10'b0000100000;
+    localparam S4A_SEND_DST_ADDR_WAIT_CAPTURE = 10'b0001000000;
+    localparam S4B_SEND_DST_ADDR_WAIT_RELEASE = 10'b0010000000;
+    localparam S5A_SEND_DATA_WAIT_CAPTURE = 10'b0100000000;
+    localparam S5B_SEND_DATA_WAIT_RELEASE = 10'b1000000000;
     
-
-    reg [3:0] state;
+    (*fsm_encoding = "none" *)
+    reg [9:0] state;
 
     // ============================================================
     // Main sequential logic
