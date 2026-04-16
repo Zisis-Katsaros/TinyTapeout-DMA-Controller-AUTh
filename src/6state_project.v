@@ -173,6 +173,7 @@ module dma_6_state(
     localparam S4_SEND_DEST_ADDR = 3'b100;
     localparam S5_SEND_DATA_TO_DEST_ADDR = 3'b101;
 
+    (* fsm_encoding = "none" *)
     reg [2:0] state;
 
     // ============================================================
