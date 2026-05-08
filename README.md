@@ -4,7 +4,7 @@
 
 ## Aristotle University of Thessaloniki - Department of Electrical and Computer Engineering
 
-# 8-bit DMA Controller for TinyTapeout SKY 26a Shuttle
+# 8-bit DMA Controller for TinyTapeout SKY 26b Shuttle
 
 ### Authors
 
